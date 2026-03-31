@@ -5,7 +5,7 @@ const mockFirestore = {
   orderBy: jest.fn(() => mockFirestore),
   onSnapshot: jest.fn(() => jest.fn()),
   get: jest.fn(() =>
-    Promise.resolve({ docs: [], exists: false, data: () => ({}) })
+    Promise.resolve({ docs: [], exists: jest.fn(() => false), data: () => ({}) })
   ),
   set: jest.fn(() => Promise.resolve()),
   update: jest.fn(() => Promise.resolve()),

@@ -69,6 +69,13 @@ const ICON_MAP: Record<string, IconMapping> = {
   shopping_bag: { name: "shopping", library: "community" },
   local_cafe: { name: "coffee", library: "community" },
   receipt_long: { name: "receipt", library: "community" },
+  terrain: { name: "terrain", library: "material" },
+  apple: { name: "apple", library: "community" },
+  google: { name: "google", library: "community" },
+  notifications_active: { name: "bell-ring", library: "community" },
+  link: { name: "link-variant", library: "community" },
+  open_in_new: { name: "open-in-new", library: "community" },
+  drive_folder_upload: { name: "folder-upload", library: "community" },
 };
 
 interface MaterialIconProps {

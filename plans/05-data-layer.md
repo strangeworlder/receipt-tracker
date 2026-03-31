@@ -374,6 +374,33 @@ function toISODate(ts: Timestamp | string | undefined): string {
 
 ---
 
+## 5a. Testing Note — `exists()` is a method
+
+The `@react-native-firebase/firestore` TypeScript types define `DocumentSnapshot.exists` as a method (`exists(): boolean`), not a boolean property. Always call it:
+
+```typescript
+// Correct
+if (!snap.exists()) return;
+const result = doc.exists() ? (doc.data() as MyType) : null;
+
+// Wrong — snap.exists is a function reference (always truthy), the guard never fires
+if (!snap.exists) return;
+```
+
+When writing Jest tests that mock Firestore snapshots, use `exists: jest.fn(() => false)` (not `exists: false`):
+
+```typescript
+// Correct
+get: jest.fn(() => Promise.resolve({ exists: jest.fn(() => true), data: () => myData }))
+
+// Wrong — calling .exists() on a boolean throws at runtime
+get: jest.fn(() => Promise.resolve({ exists: true, data: () => myData }))
+```
+
+The global `__mocks__/@react-native-firebase/firestore/index.js` already uses `jest.fn(() => false)`. When overriding `get` in individual test files, follow the same pattern.
+
+---
+
 ## 6. Service Layer Implementations
 
 ### `src/services/receiptService.ts`
@@ -797,7 +824,7 @@ export function listenToTrip(
   onUpdate: (trip: Trip & { _pendingWrite: boolean }) => void
 ): () => void {
   return tripsCol.doc(tripId).onSnapshot(snap => {
-    if (!snap.exists) return;
+    if (!snap.exists()) return;
     const data = snap.data() as FirestoreTrip;
     onUpdate({
       id: snap.id,

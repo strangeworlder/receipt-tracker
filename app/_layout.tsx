@@ -1,8 +1,8 @@
 import "../global.css";
 import "expo-sqlite/localStorage/install";
 
-import React, { useEffect } from "react";
-import { Stack } from "expo-router";
+import React, { useEffect, useState } from "react";
+import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import {
   useFonts,
@@ -14,6 +14,21 @@ import {
   Lexend_800ExtraBold,
 } from "@expo-google-fonts/lexend";
 import * as SplashScreen from "expo-splash-screen";
+import auth from "@react-native-firebase/auth";
+import type { FirebaseAuthTypes } from "@react-native-firebase/auth";
+
+import { useAuthStore } from "@/stores/authStore";
+import { upsertUserProfile, getUserProfile } from "@/services/userService";
+import {
+  configureGoogleSignIn,
+  registerForPushNotifications,
+} from "@/services/authService";
+import {
+  startReceiptSync,
+  startWarrantySync,
+  teardownAll,
+} from "@/services/syncService";
+import { startQueueProcessor } from "@/services/driveService";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -27,11 +42,56 @@ export default function RootLayout() {
     Lexend_800ExtraBold,
   });
 
+  const [user, setUser] = useState<FirebaseAuthTypes.User | null>(
+    auth().currentUser
+  );
+  const [authLoading, setAuthLoading] = useState(true);
+  const router = useRouter();
+  const segments = useSegments();
+
+  // Hide splash once fonts resolve
   useEffect(() => {
     if (fontsLoaded || fontError) {
       SplashScreen.hideAsync();
     }
   }, [fontsLoaded, fontError]);
+
+  // Subscribe to Firebase auth state — set up sync services on sign-in
+  useEffect(() => {
+    configureGoogleSignIn();
+
+    const unsubscribe = auth().onAuthStateChanged(async newUser => {
+      if (newUser && !newUser.isAnonymous) {
+        await upsertUserProfile();
+        await registerForPushNotifications();
+        startReceiptSync();
+        startWarrantySync();
+        startQueueProcessor();
+        const profile = await getUserProfile(newUser.uid);
+        useAuthStore.getState().setUser(profile, false);
+      } else {
+        useAuthStore.getState().setUser(null, newUser?.isAnonymous ?? false);
+      }
+      setUser(newUser);
+      setAuthLoading(false);
+    });
+
+    return () => {
+      unsubscribe();
+      teardownAll();
+    };
+  }, []);
+
+  // Redirect based on auth state once both fonts and auth have resolved
+  useEffect(() => {
+    if (authLoading || (!fontsLoaded && !fontError)) return;
+    const inAuthGroup = segments[0] === "(auth)";
+    if (!user && !inAuthGroup) {
+      router.replace("/(auth)/onboarding");
+    } else if (user && inAuthGroup) {
+      router.replace("/(tabs)/");
+    }
+  }, [user, authLoading, segments, fontsLoaded, fontError]);
 
   if (!fontsLoaded && !fontError) {
     return null;
