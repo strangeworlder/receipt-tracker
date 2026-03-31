@@ -125,3 +125,25 @@ export interface SettlementTransaction {
   amount: number;
   status: "pending" | "settled";
 }
+
+export interface AppUser {
+  uid: string;
+  displayName: string;
+  email: string;
+  avatarUrl?: string;
+  fcmToken?: string;
+  googleDriveLinked: boolean;
+  createdAt: string;
+}
+
+export interface TripInvitation {
+  id: string;
+  tripId: string;
+  tripName: string;
+  invitedByUid: string;
+  invitedByName: string;
+  inviteeEmail?: string;
+  status: "pending" | "accepted" | "declined" | "expired";
+  createdAt: string;
+  expiresAt: string;
+}

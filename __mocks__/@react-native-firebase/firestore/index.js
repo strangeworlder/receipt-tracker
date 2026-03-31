@@ -11,11 +11,17 @@ const mockFirestore = {
   update: jest.fn(() => Promise.resolve()),
   delete: jest.fn(() => Promise.resolve()),
   add: jest.fn(() => Promise.resolve({ id: "mock-id" })),
+  settings: jest.fn(),
 };
 
-module.exports = () => mockFirestore;
-module.exports.FieldValue = {
+const firestoreFn = () => mockFirestore;
+firestoreFn.CACHE_SIZE_UNLIMITED = -1;
+firestoreFn.FieldValue = {
   serverTimestamp: jest.fn(() => "mock-timestamp"),
   arrayUnion: jest.fn((...args) => args),
   arrayRemove: jest.fn((...args) => args),
 };
+
+module.exports = firestoreFn;
+module.exports.CACHE_SIZE_UNLIMITED = -1;
+module.exports.FieldValue = firestoreFn.FieldValue;
