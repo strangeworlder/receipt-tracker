@@ -1,8 +1,32 @@
 # Plan 2: Dashboard / Home Screen
 
+> **Status: IMPLEMENTED**
+
 > **Prerequisite:** Plan 1 (Project Foundation & Design System)
 
 This plan implements the main landing screen users see after launching the app.
+
+> ### Implementation Amendments (applied during build)
+>
+> **Test infrastructure (affects all future plans):**
+> - Created `jest.setup.js` that eagerly initializes Expo SDK 54's lazy global getters (`__ExpoImportMetaRegistry`, `structuredClone`, `TextDecoder`, etc.). Without this, all Jest tests crash during module teardown. The file is wired via `setupFiles` in `jest.config.ts`.
+> - Pinned `react-test-renderer` to `^19.1.0` to match `@testing-library/react-native@13`.
+> - Established mock patterns for screen-level tests (see `app/(tabs)/__tests__/index.test.tsx`): `expo-router` (with `Link` export), `expo-blur` (pass-through `BlurView`), `react-native-reanimated` (plain `RN.View` substitutes + chainable no-op `FadeInDown`), `@expo/vector-icons/*` (string mocks). These should be extracted to a shared test helper before Plan 03.
+>
+> **Utility functions (affects Plans 03, 05, 06, 11):**
+> - `formatCurrency(amount)`, `formatDate(dateString)`, and `daysUntil(dateString)` were defined inline in `app/(tabs)/index.tsx`. These should be extracted to `src/utils/format.ts` when the next consuming plan is implemented.
+>
+> **Shadow styling (minor deviation from CLAUDE.md):**
+> - The dashboard uses legacy `shadowColor`/`shadowOffset`/`shadowOpacity`/`shadowRadius` props instead of the `boxShadow` CSS string convention stated in `CLAUDE.md`. Future screens should use `boxShadow` strings, or this deviation should be applied project-wide as the standard.
+>
+> **`useDashboardData` uses UI types, not Firestore types:**
+> - The plan's code sample referenced `FirestoreReceipt`/`FirestoreWarranty` (Firestore `Timestamp` fields). The implementation uses `Receipt`/`Warranty` from `src/types/index.ts` (string dates) since that is what Zustand stores expose. When Plan 09 wires real Firestore listeners, `syncService` must convert `Timestamp` fields to ISO strings before calling store setters.
+>
+> **Additional icon mapping:**
+> - `receipt_long` was added to `MaterialIcon`'s `ICON_MAP` (beyond the 5 the plan specified) as a fallback icon for generic receipt rows.
+>
+> **Mock data enriched:**
+> - `receiptStore` now has 7 mock receipts (r1-r7); `warrantyStore` has 3 (w1-w3, where w3 expires 2026-04-10 to trigger the alert card).
 
 > **NativeWind v5 import rule:** All `View`, `Text`, `ScrollView`, `Pressable`, `TextInput` imports **must** come from `@/tw` (the CSS-wrapped components from Plan 01 Step 6.5), **not** from `react-native`. `Image` imports come from `@/tw/image`. Raw React Native components silently ignore `className` in NativeWind v5. All code examples in this plan assume this import pattern.
 >

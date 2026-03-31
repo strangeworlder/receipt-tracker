@@ -2,6 +2,7 @@ import type { Config } from "jest";
 
 const config: Config = {
   preset: "jest-expo",
+  setupFiles: ["<rootDir>/jest.setup.js"],
   moduleNameMapper: {
     "^@/tw$": "<rootDir>/src/tw/index",
     "^@/tw/image$": "<rootDir>/src/tw/image",

@@ -63,6 +63,12 @@ const ICON_MAP: Record<string, IconMapping> = {
   download: { name: "download", library: "community" },
   cloud_done: { name: "cloud-check", library: "community" },
   cloud_off: { name: "cloud-off-outline", library: "community" },
+  bolt: { name: "lightning-bolt", library: "community" },
+  notification_important: { name: "bell-alert", library: "community" },
+  photo_camera: { name: "camera", library: "community" },
+  shopping_bag: { name: "shopping", library: "community" },
+  local_cafe: { name: "coffee", library: "community" },
+  receipt_long: { name: "receipt", library: "community" },
 };
 
 interface MaterialIconProps {

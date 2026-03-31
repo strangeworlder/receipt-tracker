@@ -8,7 +8,7 @@ TripTrack is a cross-platform mobile app (iOS + Android) built with Expo and Rea
 
 | Layer | Technology |
 |---|---|
-| Framework | Expo (CNG — Continuous Native Generation, SDK 53+) with expo-router v3 |
+| Framework | Expo (CNG — Continuous Native Generation, SDK 54) with expo-router v6 |
 | Language | TypeScript (strict) |
 | Styling | NativeWind v5 + Tailwind CSS v4 + react-native-css with Material Design 3 tokens |
 | Navigation | expo-router (file-based, tab + stack) |
@@ -30,7 +30,7 @@ TripTrack is a cross-platform mobile app (iOS + Android) built with Expo and Rea
 > **Deprecated packages (do not use):**
 > - `expo-linear-gradient` → use `experimental_backgroundImage` CSS gradients on `View`
 > - `@react-native-async-storage/async-storage` → use `expo-sqlite` localStorage
-> - `babel.config.js` with NativeWind preset → delete; Metro handles NativeWind v5
+> - `babel.config.js` → not needed; Expo SDK 54 + Metro handles NativeWind v5 without one
 
 ---
 
@@ -261,23 +261,22 @@ EXPO_PUBLIC_FIREBASE_PROJECT_ID=...
 
 ## Implementation Plans
 
-The `plans/` directory contains 11 detailed plans. Implement them in dependency order:
+The `plans/` directory contains 10 detailed plans. Plans 01–02 are complete. Implement the rest in dependency order:
 
-| Plan | Title | Depends on |
-|---|---|---|
-| 01 | Project Foundation & Design System | — |
-| 02 | Dashboard / Home Screen | 01 |
-| 03 | Receipt Scanner & Preview | 01 |
-| 04 | Expense Splitting | 01 |
-| 05 | Warranty Tracker | 01 |
-| 06 | Trip Management | 01, 04 |
-| 07 | Architecture Overview | 01 |
-| 08 | Auth & User Management | 07 |
-| 09 | Data Layer — Firestore & Zustand | 07, 08 |
-| 10 | Receipt Storage Pipeline | 07, 08, 09 |
-| 11 | Trip Creation, Receipt Detail & Deep Linking | 07, 08, 09, 10 |
+| Plan | Title | Status | Depends on |
+|---|---|---|---|
+| 01 | Project Foundation & Design System | **Done** | — |
+| 02 | Dashboard / Home Screen | **Done** | 01 |
+| 03 | Architecture & Firebase Setup | Pending | 01, 02 |
+| 04 | Auth & User Management | Pending | 03 |
+| 05 | Data Layer — Firestore & Zustand | Pending | 03, 04 |
+| 06 | Receipt Scanner & Storage Pipeline | Pending | 05 |
+| 07 | Expense Splitting | Pending | 05 |
+| 08 | Warranty Tracker | Pending | 05 |
+| 09 | Trip Management | Pending | 05, 07 |
+| 10 | Trip Creation, Receipt Detail & Deep Linking | Pending | 04, 05 |
 
-Plans 07–11 amend and extend plans 01–06 with real Firebase connectivity replacing mock data.
+Each plan is self-contained — no need to cross-reference other plans to understand what to implement. Plans 06–10 can be implemented in any order after Plan 05 is complete (subject to the dependency constraints above).
 
 ---
 

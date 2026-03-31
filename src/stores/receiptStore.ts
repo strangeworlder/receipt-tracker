@@ -49,6 +49,33 @@ const mockReceipts: Receipt[] = [
     isWarranty: false,
     syncStatus: "synced",
   },
+  {
+    id: "r5",
+    merchant: "Blue Bottle Coffee",
+    date: "2026-03-23",
+    amount: 12.50,
+    category: "food",
+    isWarranty: false,
+    syncStatus: "synced",
+  },
+  {
+    id: "r6",
+    merchant: "Shell Gas Station",
+    date: "2026-03-22",
+    amount: 55.00,
+    category: "utility",
+    isWarranty: false,
+    syncStatus: "synced",
+  },
+  {
+    id: "r7",
+    merchant: "Electric Company",
+    date: "2026-03-10",
+    amount: 145.00,
+    category: "utility",
+    isWarranty: false,
+    syncStatus: "synced",
+  },
 ];
 
 export const useReceiptStore = create<ReceiptState>((set, get) => ({

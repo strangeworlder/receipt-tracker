@@ -31,6 +31,15 @@ const mockWarranties: Warranty[] = [
     expirationDate: "2031-03-15",
     coverageType: "Limited Warranty",
   },
+  {
+    id: "w3",
+    receiptId: "r3",
+    productName: "MacBook Pro AppleCare",
+    manufacturer: "Apple",
+    purchaseDate: "2025-04-10",
+    expirationDate: "2026-04-10",
+    coverageType: "AppleCare+",
+  },
 ];
 
 function daysBetween(date1: string, date2: string): number {
