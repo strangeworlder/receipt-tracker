@@ -1,0 +1,52 @@
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+@import "nativewind/theme";
+
+@theme {
+  /* Material Design 3 Color Palette */
+  --color-primary: #02ba41;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #e6f8ec;
+  --color-on-primary-container: #002107;
+
+  --color-secondary: #526350;
+  --color-on-secondary: #ffffff;
+  --color-secondary-container: #d5e8cf;
+  --color-on-secondary-container: #111f0f;
+
+  --color-tertiary: #39656b;
+  --color-on-tertiary: #ffffff;
+  --color-tertiary-container: #bcebf1;
+  --color-on-tertiary-container: #001f23;
+
+  --color-error: #ba1a1a;
+  --color-on-error: #ffffff;
+  --color-error-container: #ffdad6;
+  --color-on-error-container: #410002;
+
+  --color-background: #f7fbf3;
+  --color-on-background: #191d18;
+  --color-surface: #f7fbf3;
+  --color-on-surface: #191d18;
+  --color-surface-variant: #dee5d9;
+  --color-on-surface-variant: #424940;
+  --color-outline: #72796f;
+  --color-outline-variant: #c2c9bd;
+
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f1f5ed;
+  --color-surface-container: #ebefe7;
+  --color-surface-container-high: #e5e9e2;
+  --color-surface-container-highest: #e0e4dc;
+
+  /* Typography */
+  --font-lexend: "Lexend", system-ui, sans-serif;
+
+  /* Border radii (4px grid) */
+  --radius-default: 16px;
+  --radius-lg: 20px;
+  --radius-xl: 24px;
+  --radius-2xl: 32px;
+  --radius-3xl: 40px;
+  --radius-full: 9999px;
+}

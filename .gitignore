@@ -1,0 +1,43 @@
+# Dependencies
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+
+# Native build outputs
+ios/build/
+ios/Pods/
+android/build/
+android/app/build/
+android/.gradle/
+*.xcworkspace
+!default.xcworkspace
+
+# Firebase secrets — NEVER commit these
+android/app/google-services.json
+ios/GoogleService-Info.plist
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# EAS
+.easignore
+
+# Metro bundler cache
+.metro-cache/
+
+# TypeScript
+*.tsbuildinfo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
