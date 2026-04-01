@@ -32,6 +32,7 @@ import {
 } from "@/services/syncService";
 import { startQueueProcessor } from "@/services/driveService";
 import { cleanupOldLocalFiles } from "@/services/receiptService";
+import { Toast } from "@/components/Toast";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -127,6 +128,7 @@ export default function RootLayout() {
   return (
     <>
       <StatusBar style="dark" />
+      <Toast />
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />

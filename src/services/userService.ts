@@ -31,3 +31,11 @@ export async function updateFcmToken(token: string): Promise<void> {
   if (!uid) return;
   await usersCollection().doc(uid).update({ fcmToken: token });
 }
+
+export async function updateNotificationPreference(
+  enabled: boolean
+): Promise<void> {
+  const uid = auth().currentUser?.uid;
+  if (!uid) return;
+  await usersCollection().doc(uid).update({ notificationsEnabled: enabled });
+}

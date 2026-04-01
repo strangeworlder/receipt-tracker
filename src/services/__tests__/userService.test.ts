@@ -143,3 +143,27 @@ describe("updateFcmToken", () => {
     expect(getDocRef().update).not.toHaveBeenCalled();
   });
 });
+
+describe("updateNotificationPreference", () => {
+  it("updates notificationsEnabled=true in Firestore", async () => {
+    const { updateNotificationPreference } = require("../userService");
+    await updateNotificationPreference(true);
+    expect(getDocRef().update).toHaveBeenCalledWith({ notificationsEnabled: true });
+  });
+
+  it("updates notificationsEnabled=false in Firestore", async () => {
+    const { updateNotificationPreference } = require("../userService");
+    await updateNotificationPreference(false);
+    expect(getDocRef().update).toHaveBeenCalledWith({ notificationsEnabled: false });
+  });
+
+  it("does nothing when there is no current user", async () => {
+    const auth = require("@react-native-firebase/auth");
+    (auth as jest.MockedFunction<typeof auth>).mockReturnValueOnce({
+      currentUser: null,
+    } as any);
+    const { updateNotificationPreference } = require("../userService");
+    await updateNotificationPreference(true);
+    expect(getDocRef().update).not.toHaveBeenCalled();
+  });
+});

@@ -10,6 +10,10 @@ jest.mock("../userService", () => ({
   ),
 }));
 
+const mockHttpsCallable = jest.fn(() => Promise.resolve({ data: { sent: true } }));
+const mockFunctions = { httpsCallable: jest.fn(() => mockHttpsCallable) };
+jest.mock("@react-native-firebase/functions", () => jest.fn(() => mockFunctions));
+
 beforeEach(() => {
   jest.clearAllMocks();
 });
@@ -383,13 +387,15 @@ describe("unclaimPlannerItem", () => {
 });
 
 describe("sendReminder", () => {
-  it("is a function that can be called without throwing", async () => {
+  it("calls the sendSettlementReminder Cloud Function with tripId and toParticipantId", async () => {
     const chain = makeChain();
     (firestore().collection as jest.Mock).mockReturnValue(chain);
 
     const { sendReminder } = require("../tripService");
-    // sendReminder is a stub — should not throw
-    await expect(sendReminder("t1", "p1")).resolves.toBeUndefined();
+    await sendReminder("t1", "p1");
+
+    expect(mockFunctions.httpsCallable).toHaveBeenCalledWith("sendSettlementReminder");
+    expect(mockHttpsCallable).toHaveBeenCalledWith({ tripId: "t1", toParticipantId: "p1" });
   });
 });
 

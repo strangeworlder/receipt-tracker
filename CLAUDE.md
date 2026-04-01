@@ -261,22 +261,23 @@ EXPO_PUBLIC_FIREBASE_PROJECT_ID=...
 
 ## Implementation Plans
 
-The `plans/` directory contains 10 detailed plans. Plans 01–02 are complete. Implement the rest in dependency order:
+The `plans/` directory contains 11 detailed plans. Plans 01–09 are complete. Implement the rest in dependency order:
 
 | Plan | Title | Status | Depends on |
 |---|---|---|---|
 | 01 | Project Foundation & Design System | **Done** | — |
 | 02 | Dashboard / Home Screen | **Done** | 01 |
-| 03 | Architecture & Firebase Setup | Pending | 01, 02 |
-| 04 | Auth & User Management | Pending | 03 |
-| 05 | Data Layer — Firestore & Zustand | Pending | 03, 04 |
-| 06 | Receipt Scanner & Storage Pipeline | Pending | 05 |
-| 07 | Expense Splitting | Pending | 05 |
-| 08 | Warranty Tracker | Pending | 05 |
-| 09 | Trip Management | Pending | 05, 07 |
-| 10 | Trip Creation, Receipt Detail & Deep Linking | Pending | 04, 05 |
+| 03 | Architecture & Firebase Setup | **Done** | 01, 02 |
+| 04 | Auth & User Management | **Done** | 03 |
+| 05 | Data Layer — Firestore & Zustand | **Done** | 03, 04 |
+| 06 | Receipt Scanner & Storage Pipeline | **Done** | 05 |
+| 07 | Expense Splitting | **Done** | 05 |
+| 08 | Warranty Tracker | **Done** | 05 |
+| 09 | Trip Management | **Done** | 05, 07 |
+| 10 | Trip Creation, Receipt Detail & Deep Linking | **In Progress** | 04, 05 |
+| 11 | Deferred Features & Polish | **In Progress** | 01–10 |
 
-Each plan is self-contained — no need to cross-reference other plans to understand what to implement. Plans 06–10 can be implemented in any order after Plan 05 is complete (subject to the dependency constraints above).
+Each plan is self-contained — no need to cross-reference other plans to understand what to implement.
 
 ---
 

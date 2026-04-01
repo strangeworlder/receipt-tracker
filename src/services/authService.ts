@@ -7,6 +7,7 @@ import {
 import * as AppleAuthentication from "expo-apple-authentication";
 import * as SecureStore from "expo-secure-store";
 import { updateFcmToken } from "./userService";
+import { useAuthStore } from "../stores/authStore";
 
 export function configureGoogleSignIn(): void {
   GoogleSignin.configure({
@@ -93,6 +94,10 @@ export async function refreshGoogleAccessToken(): Promise<string> {
 }
 
 export async function registerForPushNotifications(): Promise<void> {
+  // G3: Respect the user's notification preference before registering
+  const notificationsEnabled = useAuthStore.getState().notificationsEnabled;
+  if (!notificationsEnabled) return;
+
   const permission = await messaging().requestPermission();
   const granted =
     permission === messaging.AuthorizationStatus.AUTHORIZED ||

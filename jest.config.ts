@@ -8,6 +8,7 @@ const config: Config = {
     "^@/tw$": "<rootDir>/src/tw/index",
     "^@/tw/image$": "<rootDir>/src/tw/image",
     "^@/tw/animated$": "<rootDir>/src/tw/animated",
+    "^@/test-utils/(.*)$": "<rootDir>/src/test-utils/$1",
     "^@/(.*)$": "<rootDir>/src/$1",
   },
   transformIgnorePatterns: [

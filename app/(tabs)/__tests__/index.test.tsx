@@ -1,52 +1,10 @@
 import React from "react";
 import { render, screen, fireEvent } from "@testing-library/react-native";
+import "@/test-utils/mocks";
 import { useReceiptStore } from "@/stores/receiptStore";
 import { useWarrantyStore } from "@/stores/warrantyStore";
 import HomeScreen from "../index";
 import type { Receipt, Warranty } from "@/types";
-
-// ─── Mocks ──────────────────────────────────────────────────────────────────
-
-jest.mock("expo-router", () => {
-  const RN = require("react-native");
-  return {
-    router: { push: jest.fn() },
-    Link: RN.TouchableOpacity,
-    usePathname: jest.fn(() => "/"),
-    useSegments: jest.fn(() => []),
-  };
-});
-
-jest.mock("expo-blur", () => ({
-  BlurView: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-}));
-
-jest.mock("@expo/vector-icons/MaterialCommunityIcons", () => "MaterialCommunityIcons");
-jest.mock("@expo/vector-icons/MaterialIcons", () => "MaterialIcons");
-
-jest.mock("react-native-reanimated", () => {
-  const RN = require("react-native");
-  return {
-    __esModule: true,
-    default: {
-      View: RN.View,
-      Text: RN.Text,
-      ScrollView: RN.ScrollView,
-      createAnimatedComponent: (C: React.ComponentType) => C,
-    },
-    FadeInDown: {
-      delay: () => ({
-        duration: () => ({
-          springify: () => undefined,
-        }),
-      }),
-    },
-    useSharedValue: jest.fn(() => ({ value: 0 })),
-    useAnimatedStyle: jest.fn(() => ({})),
-    withTiming: jest.fn((v) => v),
-    withSpring: jest.fn((v) => v),
-  };
-});
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 

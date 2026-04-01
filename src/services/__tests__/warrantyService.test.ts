@@ -254,3 +254,60 @@ describe("listenToWarranties", () => {
     );
   });
 });
+
+describe("createWarranty — notification gating", () => {
+  it("skips scheduling when notifications are disabled", async () => {
+    const mockSet = jest.fn(() => Promise.resolve());
+    const mockDoc = jest.fn(() => ({ set: mockSet }));
+    (firestore().collection as jest.Mock).mockReturnValue({ doc: mockDoc });
+
+    const Notifications = require("expo-notifications");
+
+    // Disable notifications preference
+    const { useAuthStore } = require("@/stores/authStore");
+    useAuthStore.setState({ notificationsEnabled: false });
+
+    const { createWarranty } = require("../warrantyService");
+    const future = new Date();
+    future.setFullYear(future.getFullYear() + 1);
+
+    await createWarranty({
+      receiptId: "rec-gate",
+      productName: "Gated Product",
+      manufacturer: "Acme",
+      purchaseDate: "2026-01-01",
+      expirationDate: future.toISOString().split("T")[0],
+      coverageType: "Standard",
+    });
+
+    expect(Notifications.scheduleNotificationAsync).not.toHaveBeenCalled();
+
+    useAuthStore.setState({ notificationsEnabled: true });
+  });
+
+  it("schedules notifications when enabled (default)", async () => {
+    const mockSet = jest.fn(() => Promise.resolve());
+    const mockDoc = jest.fn(() => ({ set: mockSet }));
+    (firestore().collection as jest.Mock).mockReturnValue({ doc: mockDoc });
+
+    const Notifications = require("expo-notifications");
+
+    const { useAuthStore } = require("@/stores/authStore");
+    useAuthStore.setState({ notificationsEnabled: true });
+
+    const { createWarranty } = require("../warrantyService");
+    const future = new Date();
+    future.setFullYear(future.getFullYear() + 1);
+
+    await createWarranty({
+      receiptId: "rec-gate-2",
+      productName: "Enabled Product",
+      manufacturer: "Acme",
+      purchaseDate: "2026-01-01",
+      expirationDate: future.toISOString().split("T")[0],
+      coverageType: "Standard",
+    });
+
+    expect(Notifications.scheduleNotificationAsync).toHaveBeenCalled();
+  });
+});

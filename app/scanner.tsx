@@ -22,6 +22,7 @@ import { createReceiptRecord } from "@/services/receiptService";
 import { createFromReceipt } from "@/services/warrantyService";
 import { queueDriveUpload } from "@/services/driveService";
 import { useReceiptStore } from "@/stores/receiptStore";
+import { useToast } from "@/hooks/useToast";
 import { formatCurrency, formatDate } from "@/utils/format";
 import { colors } from "@/theme/colors";
 import type { ReceiptCategory } from "@/types";
@@ -153,7 +154,8 @@ export default function ScannerScreen() {
         syncStatus: "pending",
       });
 
-      // 5. Navigate back
+      // 5. Show success toast and navigate back
+      useToast.getState().showToast("Receipt saved!", "success");
       router.replace("/(tabs)/");
     } catch (error) {
       console.error("Save failed:", error);

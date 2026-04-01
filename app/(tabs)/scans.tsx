@@ -1,6 +1,7 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { router } from "expo-router";
 import Animated, { FadeInDown } from "react-native-reanimated";
+import { TextInput } from "react-native";
 import { View, Text, ScrollView, Pressable } from "@/tw";
 import { TopAppBar } from "@/components/TopAppBar";
 import { MaterialIcon } from "@/components/MaterialIcon";
@@ -53,11 +54,24 @@ export default function ScansScreen() {
   const [activeFilter, setActiveFilter] = useState<ReceiptCategory | "all">(
     "all"
   );
+  const [searchQuery, setSearchQuery] = useState("");
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [debouncedQuery, setDebouncedQuery] = useState("");
 
-  const filteredReceipts =
-    activeFilter === "all"
-      ? receipts
-      : receipts.filter((r) => r.category === activeFilter);
+  function handleSearchChange(text: string) {
+    setSearchQuery(text);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => setDebouncedQuery(text), 300);
+  }
+
+  const filteredReceipts = receipts.filter((r) => {
+    const matchesCategory =
+      activeFilter === "all" || r.category === activeFilter;
+    const matchesSearch =
+      debouncedQuery.trim() === "" ||
+      r.merchant.toLowerCase().includes(debouncedQuery.trim().toLowerCase());
+    return matchesCategory && matchesSearch;
+  });
 
   return (
     <View className="flex-1 bg-surface">
@@ -78,6 +92,37 @@ export default function ScansScreen() {
           <Text className="text-on-surface text-2xl font-bold font-headline">
             Receipts
           </Text>
+        </View>
+
+        {/* Search input */}
+        <View
+          style={{
+            marginHorizontal: 24,
+            flexDirection: "row",
+            alignItems: "center",
+            backgroundColor: colors.surfaceContainerLow,
+            borderRadius: 16,
+            borderCurve: "continuous",
+            paddingHorizontal: 14,
+            paddingVertical: 10,
+            gap: 10,
+          }}
+        >
+          <MaterialIcon name="search" size={20} color={colors.onSurfaceVariant} />
+          <TextInput
+            value={searchQuery}
+            onChangeText={handleSearchChange}
+            placeholder="Search receipts…"
+            placeholderTextColor={colors.onSurfaceVariant}
+            style={{
+              flex: 1,
+              fontSize: 15,
+              fontFamily: "Lexend_400Regular",
+              color: colors.onSurface,
+            }}
+            returnKeyType="search"
+            clearButtonMode="while-editing"
+          />
         </View>
 
         {/* Filter pills */}

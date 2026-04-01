@@ -4,7 +4,9 @@ import { ScrollView, View, Text, Pressable } from "@/tw";
 import { useRouter } from "expo-router";
 import { TopAppBar } from "@/components/TopAppBar";
 import { MaterialIcon } from "@/components/MaterialIcon";
+import { WarrantyEditSheet } from "@/components/WarrantyEditSheet";
 import { useWarrantyStore } from "@/stores/warrantyStore";
+import { deleteWarranty } from "@/services/warrantyService";
 import { formatDate, daysUntil } from "@/utils/format";
 import { colors } from "@/theme/colors";
 import type { Warranty } from "@/types";
@@ -12,6 +14,54 @@ import type { Warranty } from "@/types";
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
 type FilterOption = "all" | "active" | "expired";
+
+// ─── Warranty Options Handler ──────────────────────────────────────────────────
+
+function useWarrantyOptions(warranty: Warranty) {
+  const deleteWarrantyFromStore = useWarrantyStore((s) => s.deleteWarranty);
+  const [editSheetVisible, setEditSheetVisible] = useState(false);
+  const router = useRouter();
+
+  function openOptions() {
+    Alert.alert(
+      "Warranty Options",
+      warranty.productName,
+      [
+        {
+          text: "View Receipt",
+          onPress: () => router.push(`/receipts/${warranty.receiptId}` as any),
+        },
+        {
+          text: "Edit Warranty",
+          onPress: () => setEditSheetVisible(true),
+        },
+        {
+          text: "Delete Warranty",
+          style: "destructive",
+          onPress: () =>
+            Alert.alert(
+              "Delete Warranty?",
+              "This will permanently remove the warranty and cancel its reminders.",
+              [
+                { text: "Cancel", style: "cancel" },
+                {
+                  text: "Delete",
+                  style: "destructive",
+                  onPress: async () => {
+                    await deleteWarranty(warranty.id);
+                    deleteWarrantyFromStore(warranty.id);
+                  },
+                },
+              ]
+            ),
+        },
+        { text: "Cancel", style: "cancel" },
+      ]
+    );
+  }
+
+  return { openOptions, editSheetVisible, setEditSheetVisible, router };
+}
 
 // ─── Filter Bar ────────────────────────────────────────────────────────────────
 
@@ -67,9 +117,10 @@ function FilterBar({
 // ─── Expiring / Expired Card ───────────────────────────────────────────────────
 
 function ExpiringCard({ warranty }: { warranty: Warranty }) {
-  const router = useRouter();
   const status = useWarrantyStore((s) => s.getWarrantyStatus(warranty.id));
   const days = useWarrantyStore((s) => s.getDaysRemaining(warranty.id));
+  const { openOptions, editSheetVisible, setEditSheetVisible, router } =
+    useWarrantyOptions(warranty);
 
   const isExpired = status === "expired";
 
@@ -90,149 +141,168 @@ function ExpiringCard({ warranty }: { warranty: Warranty }) {
   }
 
   return (
-    <View
-      className="bg-surface-container-lowest rounded-xl p-6 border border-outline/10"
-      style={[{ overflow: "hidden", borderCurve: "continuous" }, styles.cardShadow]}
-    >
-      {/* Status badge — absolute top-right */}
-      <View style={[styles.badge, badgeBg]}>
-        <Text style={styles.badgeText}>{badgeLabel}</Text>
-      </View>
-
-      {/* Header */}
-      <View className="gap-0.5 mb-4 pr-28">
-        <Text className="text-[10px] font-extrabold uppercase tracking-widest text-primary">
-          {warranty.manufacturer}
-        </Text>
-        <Text className="text-2xl font-bold text-on-surface" numberOfLines={2}>
-          {warranty.productName}
-        </Text>
-        <Text className="text-sm text-on-surface-variant">
-          Purchased {formatDate(warranty.purchaseDate)}
-        </Text>
-      </View>
-
-      {/* Warning / expired banner */}
+    <>
       <View
-        className={`${bannerBg} p-4 rounded-lg mb-4`}
-        style={[{ flexDirection: "row", gap: 12, alignItems: "flex-start" }, { borderCurve: "continuous" }]}
+        className="bg-surface-container-lowest rounded-xl p-6 border border-outline/10"
+        style={[{ overflow: "hidden", borderCurve: "continuous" }, styles.cardShadow]}
       >
-        <MaterialIcon name="warning" size={20} color={bannerIconColor} />
-        <View className="flex-1">
-          <Text
-            className="font-bold text-sm text-on-surface"
-            style={{ color: isExpired ? colors.onSurfaceVariant : colors.onErrorContainer }}
-          >
-            {urgencyText()}
-          </Text>
-          <Text
-            className="text-xs mt-0.5"
-            style={{ color: isExpired ? colors.onSurfaceVariant : colors.onErrorContainer }}
-          >
-            Coverage {isExpired ? "ended" : "ends"} {formatDate(warranty.expirationDate)}
-          </Text>
+        {/* Status badge — absolute top-right */}
+        <View style={[styles.badge, badgeBg]}>
+          <Text style={styles.badgeText}>{badgeLabel}</Text>
         </View>
-      </View>
 
-      {/* Action row */}
-      <View style={{ flexDirection: "row", gap: 8 }}>
-        <Pressable
-          onPress={() => router.push(`/receipts/${warranty.receiptId}` as any)}
-          className="flex-1 bg-primary rounded-lg py-3 flex-row items-center justify-center"
-          style={[{ gap: 6, borderCurve: "continuous" }, isExpired && { opacity: 0.5 }]}
-        >
-          <MaterialIcon name="receipt_long" size={16} color={colors.onPrimary} />
-          <Text className="text-on-primary text-sm font-bold">View Receipt</Text>
-        </Pressable>
-        <Pressable
-          onPress={() => Alert.alert("Options", "Coming soon.")}
-          className="w-12 h-12 bg-surface-container rounded-lg items-center justify-center"
-          style={{ borderCurve: "continuous" }}
-        >
-          <MaterialIcon name="more_vert" size={20} color={colors.onSurfaceVariant} />
-        </Pressable>
-      </View>
-    </View>
-  );
-}
-
-// ─── Healthy Card ─────────────────────────────────────────────────────────────
-
-function HealthyCard({ warranty }: { warranty: Warranty }) {
-  const router = useRouter();
-  const days = useWarrantyStore((s) => s.getDaysRemaining(warranty.id));
-
-  return (
-    <View
-      className="bg-surface-container-lowest rounded-xl p-6 border border-outline/10"
-      style={[{ borderCurve: "continuous" }, styles.cardShadow]}
-    >
-      {/* Header row */}
-      <View className="flex-row items-start gap-3 mb-4">
-        <View
-          className="w-12 h-12 bg-primary-container rounded-lg items-center justify-center"
-          style={{ borderCurve: "continuous" }}
-        >
-          <MaterialIcon name="verified_user" size={22} color={colors.primary} />
-        </View>
-        <View className="flex-1 gap-0.5">
+        {/* Header */}
+        <View className="gap-0.5 mb-4 pr-28">
           <Text className="text-[10px] font-extrabold uppercase tracking-widest text-primary">
             {warranty.manufacturer}
           </Text>
-          <Text className="text-xl font-bold text-on-surface" numberOfLines={2}>
+          <Text className="text-2xl font-bold text-on-surface" numberOfLines={2}>
             {warranty.productName}
           </Text>
           <Text className="text-sm text-on-surface-variant">
             Purchased {formatDate(warranty.purchaseDate)}
           </Text>
         </View>
-      </View>
 
-      {/* Healthy status banner */}
-      <View
-        className="p-4 rounded-lg mb-4"
-        style={[
-          {
-            backgroundColor: `${colors.primary}0d`,
-            borderWidth: 1,
-            borderColor: `${colors.primary}1a`,
-            flexDirection: "row",
-            gap: 12,
-            alignItems: "flex-start",
-            borderCurve: "continuous",
-          },
-        ]}
-      >
-        <MaterialIcon name="verified_user" size={20} color={colors.primary} />
-        <View className="flex-1">
-          <Text className="text-primary font-bold text-sm">
-            {days} day{days !== 1 ? "s" : ""} left
-          </Text>
-          <Text className="text-on-surface-variant text-xs mt-0.5">
-            Coverage ends {formatDate(warranty.expirationDate)}
-          </Text>
+        {/* Warning / expired banner */}
+        <View
+          className={`${bannerBg} p-4 rounded-lg mb-4`}
+          style={[{ flexDirection: "row", gap: 12, alignItems: "flex-start" }, { borderCurve: "continuous" }]}
+        >
+          <MaterialIcon name="warning" size={20} color={bannerIconColor} />
+          <View className="flex-1">
+            <Text
+              className="font-bold text-sm text-on-surface"
+              style={{ color: isExpired ? colors.onSurfaceVariant : colors.onErrorContainer }}
+            >
+              {urgencyText()}
+            </Text>
+            <Text
+              className="text-xs mt-0.5"
+              style={{ color: isExpired ? colors.onSurfaceVariant : colors.onErrorContainer }}
+            >
+              Coverage {isExpired ? "ended" : "ends"} {formatDate(warranty.expirationDate)}
+            </Text>
+          </View>
+        </View>
+
+        {/* Action row */}
+        <View style={{ flexDirection: "row", gap: 8 }}>
+          <Pressable
+            onPress={() => router.push(`/receipts/${warranty.receiptId}` as any)}
+            className="flex-1 bg-primary rounded-lg py-3 flex-row items-center justify-center"
+            style={[{ gap: 6, borderCurve: "continuous" }, isExpired && { opacity: 0.5 }]}
+          >
+            <MaterialIcon name="receipt_long" size={16} color={colors.onPrimary} />
+            <Text className="text-on-primary text-sm font-bold">View Receipt</Text>
+          </Pressable>
+          <Pressable
+            onPress={openOptions}
+            accessibilityHint={`warranty-options-${warranty.id}`}
+            className="w-12 h-12 bg-surface-container rounded-lg items-center justify-center"
+            style={{ borderCurve: "continuous" }}
+          >
+            <MaterialIcon name="more_vert" size={20} color={colors.onSurfaceVariant} />
+          </Pressable>
         </View>
       </View>
+      <WarrantyEditSheet
+        warranty={warranty}
+        visible={editSheetVisible}
+        onClose={() => setEditSheetVisible(false)}
+        onSaved={() => {}}
+      />
+    </>
+  );
+}
 
-      {/* Action row */}
-      <View style={{ flexDirection: "row", gap: 8 }}>
-        <Pressable
-          onPress={() => router.push(`/receipts/${warranty.receiptId}` as any)}
-          className="flex-1 bg-surface-container-high rounded-lg py-3 flex-row items-center justify-center"
-          style={[{ gap: 6, borderCurve: "continuous" }]}
+// ─── Healthy Card ─────────────────────────────────────────────────────────────
+
+function HealthyCard({ warranty }: { warranty: Warranty }) {
+  const days = useWarrantyStore((s) => s.getDaysRemaining(warranty.id));
+  const { openOptions, editSheetVisible, setEditSheetVisible, router } =
+    useWarrantyOptions(warranty);
+
+  return (
+    <>
+      <View
+        className="bg-surface-container-lowest rounded-xl p-6 border border-outline/10"
+        style={[{ borderCurve: "continuous" }, styles.cardShadow]}
+      >
+        {/* Header row */}
+        <View className="flex-row items-start gap-3 mb-4">
+          <View
+            className="w-12 h-12 bg-primary-container rounded-lg items-center justify-center"
+            style={{ borderCurve: "continuous" }}
+          >
+            <MaterialIcon name="verified_user" size={22} color={colors.primary} />
+          </View>
+          <View className="flex-1 gap-0.5">
+            <Text className="text-[10px] font-extrabold uppercase tracking-widest text-primary">
+              {warranty.manufacturer}
+            </Text>
+            <Text className="text-xl font-bold text-on-surface" numberOfLines={2}>
+              {warranty.productName}
+            </Text>
+            <Text className="text-sm text-on-surface-variant">
+              Purchased {formatDate(warranty.purchaseDate)}
+            </Text>
+          </View>
+        </View>
+
+        {/* Healthy status banner */}
+        <View
+          className="p-4 rounded-lg mb-4"
+          style={[
+            {
+              backgroundColor: `${colors.primary}0d`,
+              borderWidth: 1,
+              borderColor: `${colors.primary}1a`,
+              flexDirection: "row",
+              gap: 12,
+              alignItems: "flex-start",
+              borderCurve: "continuous",
+            },
+          ]}
         >
-          <MaterialIcon name="receipt_long" size={16} color={colors.onSurface} />
-          <Text className="text-on-surface text-sm font-bold">View Receipt</Text>
-        </Pressable>
-        <Pressable
-          onPress={() => Alert.alert("Options", "Coming soon.")}
-          className="w-12 h-12 bg-surface-container rounded-lg items-center justify-center"
-          style={{ borderCurve: "continuous" }}
-        >
-          <MaterialIcon name="more_vert" size={20} color={colors.onSurfaceVariant} />
-        </Pressable>
+          <MaterialIcon name="verified_user" size={20} color={colors.primary} />
+          <View className="flex-1">
+            <Text className="text-primary font-bold text-sm">
+              {days} day{days !== 1 ? "s" : ""} left
+            </Text>
+            <Text className="text-on-surface-variant text-xs mt-0.5">
+              Coverage ends {formatDate(warranty.expirationDate)}
+            </Text>
+          </View>
+        </View>
+
+        {/* Action row */}
+        <View style={{ flexDirection: "row", gap: 8 }}>
+          <Pressable
+            onPress={() => router.push(`/receipts/${warranty.receiptId}` as any)}
+            className="flex-1 bg-surface-container-high rounded-lg py-3 flex-row items-center justify-center"
+            style={[{ gap: 6, borderCurve: "continuous" }]}
+          >
+            <MaterialIcon name="receipt_long" size={16} color={colors.onSurface} />
+            <Text className="text-on-surface text-sm font-bold">View Receipt</Text>
+          </Pressable>
+          <Pressable
+            onPress={openOptions}
+            accessibilityHint={`warranty-options-${warranty.id}`}
+            className="w-12 h-12 bg-surface-container rounded-lg items-center justify-center"
+            style={{ borderCurve: "continuous" }}
+          >
+            <MaterialIcon name="more_vert" size={20} color={colors.onSurfaceVariant} />
+          </Pressable>
+        </View>
       </View>
-    </View>
+      <WarrantyEditSheet
+        warranty={warranty}
+        visible={editSheetVisible}
+        onClose={() => setEditSheetVisible(false)}
+        onSaved={() => {}}
+      />
+    </>
   );
 }
 

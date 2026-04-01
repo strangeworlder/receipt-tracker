@@ -11,6 +11,7 @@ import { MaterialIcon } from "@/components/MaterialIcon";
 import { StatusPill } from "@/components/StatusPill";
 import { formatCurrency } from "@/utils/format";
 import { colors } from "@/theme/colors";
+import { useToast } from "@/hooks/useToast";
 
 // ─── BlurView with web fallback ───────────────────────────────────────────────
 
@@ -161,7 +162,7 @@ function TransactionsSection({ trip, currentUid }: { trip: any; currentUid: stri
 
   const handleRemindAppUser = async (toParticipantId: string) => {
     await sendReminder(trip.id, toParticipantId);
-    Alert.alert("Reminder Sent", "The participant will receive a notification.");
+    useToast.getState().showToast("Reminder sent!", "success");
   };
 
   const handleRemindGhost = async (ghost: any) => {

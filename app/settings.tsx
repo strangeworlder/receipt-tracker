@@ -8,6 +8,7 @@ import { Card } from "@/components/Card";
 import { colors } from "@/theme/colors";
 import { useAuthStore } from "@/stores/authStore";
 import { signOut, linkWithGoogle } from "@/services/authService";
+import { updateNotificationPreference } from "@/services/userService";
 
 function providerBadge(isAnonymous: boolean, driveLinked: boolean): string {
   if (isAnonymous) return "Offline";
@@ -16,10 +17,19 @@ function providerBadge(isAnonymous: boolean, driveLinked: boolean): string {
 }
 
 export default function SettingsScreen() {
-  const { user, isAnonymous, driveLinked } = useAuthStore();
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const { user, isAnonymous, driveLinked, notificationsEnabled, setNotificationsEnabled } = useAuthStore();
   const [linkingDrive, setLinkingDrive] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
+
+  async function handleToggleNotifications(enabled: boolean) {
+    setNotificationsEnabled(enabled);
+    try {
+      await updateNotificationPreference(enabled);
+    } catch {
+      // Revert optimistic update on failure
+      setNotificationsEnabled(!enabled);
+    }
+  }
 
   async function handleLinkGoogle() {
     setLinkingDrive(true);
@@ -189,7 +199,7 @@ export default function SettingsScreen() {
             </View>
             <Switch
               value={notificationsEnabled}
-              onValueChange={setNotificationsEnabled}
+              onValueChange={handleToggleNotifications}
               trackColor={{
                 false: colors.outlineVariant,
                 true: colors.primary,

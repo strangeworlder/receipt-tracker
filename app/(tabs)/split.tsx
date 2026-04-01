@@ -8,6 +8,7 @@ import {
 } from "@/tw";
 import { Alert, Modal, StyleSheet } from "react-native";
 import { BlurView } from "expo-blur";
+import { useToast } from "@/hooks/useToast";
 import { TopAppBar } from "@/components/TopAppBar";
 import { PrimaryButton } from "@/components/PrimaryButton";
 import { SecondaryButton } from "@/components/SecondaryButton";
@@ -779,7 +780,7 @@ export default function SplitScreen() {
         await addExpense(tripId, expense);
       }
       resetSplit();
-      Alert.alert("Split saved!", "The expense has been recorded.");
+      useToast.getState().showToast("Split saved!", "success");
     } catch {
       Alert.alert("Error", "Failed to save split. Please try again.");
     } finally {

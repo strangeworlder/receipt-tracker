@@ -2,6 +2,7 @@ import firestore from "@react-native-firebase/firestore";
 import * as Notifications from "expo-notifications";
 import { requireAuth } from "./utils";
 import { generateUUID } from "../utils/uuid";
+import { useAuthStore } from "../stores/authStore";
 import type { FirestoreWarranty } from "../types/firestore";
 import type { Warranty } from "../types";
 import type { OCRResult } from "./ocrService";
@@ -120,6 +121,10 @@ async function scheduleExpirationNotifications(
   productName: string,
   expirationDate: string
 ): Promise<string[]> {
+  // G2: Respect the user's notification preference
+  const notificationsEnabled = useAuthStore.getState().notificationsEnabled;
+  if (!notificationsEnabled) return [];
+
   const expiry = new Date(expirationDate);
   const notificationIds: string[] = [];
 

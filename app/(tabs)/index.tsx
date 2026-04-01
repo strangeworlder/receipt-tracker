@@ -111,11 +111,7 @@ export default function HomeScreen() {
           backgroundColor: colors.primary,
           alignItems: "center",
           justifyContent: "center",
-          shadowColor: colors.primary,
-          shadowOffset: { width: 0, height: 6 },
-          shadowOpacity: 0.3,
-          shadowRadius: 12,
-          elevation: 8,
+          boxShadow: `0 6px 12px ${colors.primary}4d`,
           borderCurve: "continuous",
         }}
       >
@@ -209,11 +205,7 @@ function BentoGrid({ items, cardWidth }: BentoGridProps) {
             backgroundColor: item.highlighted ? colors.primary : colors.surfaceContainerLow,
             borderWidth: item.highlighted ? 0 : 1,
             borderColor: "rgba(114, 121, 111, 0.1)",
-            shadowColor: item.highlighted ? colors.primary : "transparent",
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: item.highlighted ? 0.2 : 0,
-            shadowRadius: 12,
-            elevation: item.highlighted ? 4 : 0,
+            boxShadow: item.highlighted ? `0 4px 12px ${colors.primary}33` : "none",
           }}
         >
           <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
@@ -300,11 +292,7 @@ function WarrantyAlert({ productName, expirationDate }: WarrantyAlertProps) {
           paddingVertical: 10,
           borderRadius: 9999,
           marginLeft: 12,
-          shadowColor: "#000",
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.15,
-          shadowRadius: 4,
-          elevation: 3,
+          boxShadow: "0 2px 4px rgba(0, 0, 0, 0.15)",
         }}
       >
         <Text style={{ color: colors.onError, fontSize: 12, fontWeight: "700" }}>
@@ -381,10 +369,7 @@ function ScanRow({ scan }: { scan: Scan }) {
         borderCurve: "continuous",
         borderWidth: 1,
         borderColor: "rgba(114, 121, 111, 0.05)",
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 1 },
-        shadowOpacity: 0.05,
-        shadowRadius: 4,
+        boxShadow: "0 1px 4px rgba(0, 0, 0, 0.05)",
       }}
     >
       {/* Icon container */}
