@@ -2,6 +2,7 @@ import "../global.css";
 import "expo-sqlite/localStorage/install";
 
 import React, { useEffect, useState } from "react";
+import { AppState } from "react-native";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import {
@@ -29,6 +30,7 @@ import {
   teardownAll,
 } from "@/services/syncService";
 import { startQueueProcessor } from "@/services/driveService";
+import { cleanupOldLocalFiles } from "@/services/receiptService";
 
 SplashScreen.preventAutoHideAsync();
 
@@ -81,6 +83,16 @@ export default function RootLayout() {
       teardownAll();
     };
   }, []);
+
+  // Cleanup old local files when app becomes active
+  useEffect(() => {
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active" && user && !user.isAnonymous) {
+        cleanupOldLocalFiles().catch(console.error);
+      }
+    });
+    return () => sub.remove();
+  }, [user]);
 
   // Redirect based on auth state once both fonts and auth have resolved
   useEffect(() => {

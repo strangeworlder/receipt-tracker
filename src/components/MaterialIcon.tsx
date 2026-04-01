@@ -76,6 +76,11 @@ const ICON_MAP: Record<string, IconMapping> = {
   link: { name: "link-variant", library: "community" },
   open_in_new: { name: "open-in-new", library: "community" },
   drive_folder_upload: { name: "folder-upload", library: "community" },
+  groups: { name: "account-multiple", library: "community" },
+  balance: { name: "scale-balance", library: "community" },
+  savings: { name: "piggy-bank", library: "community" },
+  person_add: { name: "account-plus", library: "community" },
+  check_circle_outline: { name: "check-circle-outline", library: "community" },
 };
 
 interface MaterialIconProps {

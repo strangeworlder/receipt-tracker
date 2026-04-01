@@ -1,7 +1,11 @@
 import firestore from "@react-native-firebase/firestore";
+import storage from "@react-native-firebase/storage";
+import auth from "@react-native-firebase/auth";
 import * as FileSystem from "expo-file-system/legacy";
+import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
 import { requireAuth } from "./utils";
 import { generateUUID } from "../utils/uuid";
+import { useReceiptStore } from "../stores/receiptStore";
 import type { FirestoreReceipt } from "../types/firestore";
 import type { ReceiptCategory, Receipt } from "../types";
 import type { OCRResult } from "./ocrService";
@@ -78,6 +82,18 @@ export async function updateReceipt(
 export async function deleteReceipt(receiptId: string): Promise<void> {
   requireAuth();
   await receiptsCol().doc(receiptId).delete();
+
+  // Delete from Firebase Storage
+  const uid = auth().currentUser?.uid;
+  if (uid) {
+    try {
+      await storage().ref(`receipts/${uid}/${receiptId}.jpg`).delete();
+    } catch {
+      // File may not exist in Storage yet (syncStatus: "local") — ignore
+    }
+  }
+
+  // Delete local file
   const localPath = `${RECEIPTS_DIR}${receiptId}.jpg`;
   const info = await FileSystem.getInfoAsync(localPath);
   if (info.exists) {
@@ -85,12 +101,70 @@ export async function deleteReceipt(receiptId: string): Promise<void> {
   }
 }
 
-// Stub — full implementation in Plan 06
+export async function compressReceiptImage(localUri: string): Promise<string> {
+  const image = await ImageManipulator.manipulate(localUri)
+    .resize({ width: 1200 })
+    .renderAsync();
+  const result = await image.saveAsync({ format: SaveFormat.JPEG, compress: 0.82 });
+  return result.uri;
+}
+
 export async function uploadToFirebaseStorage(
-  _receiptId: string,
-  _localUri: string
+  receiptId: string,
+  localUri: string
 ): Promise<string> {
-  return "";
+  const uid = requireAuth();
+  const compressedUri = await compressReceiptImage(localUri);
+  const remotePath = `receipts/${uid}/${receiptId}.jpg`;
+
+  const ref = storage().ref(remotePath);
+  await ref.putFile(compressedUri);
+  const downloadUrl = await ref.getDownloadURL();
+
+  await firestore().collection("receipts").doc(receiptId).update({
+    firebaseStorageUrl: downloadUrl,
+    syncStatus: "synced",
+  });
+
+  return downloadUrl;
+}
+
+export async function shareReceiptWithTrip(
+  receiptId: string,
+  tripId: string,
+  localUri: string
+): Promise<void> {
+  requireAuth();
+  const compressedUri = await compressReceiptImage(localUri);
+  const tripPath = `trips/${tripId}/receipts/${receiptId}.jpg`;
+
+  const ref = storage().ref(tripPath);
+  await ref.putFile(compressedUri);
+  const sharedUrl = await ref.getDownloadURL();
+
+  await firestore().collection("receipts").doc(receiptId).update({
+    tripId,
+    firebaseStorageUrl: sharedUrl,
+  });
+}
+
+export async function cleanupOldLocalFiles(): Promise<void> {
+  const receipts = useReceiptStore.getState().receipts;
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - 90);
+
+  for (const receipt of receipts) {
+    if (
+      receipt.syncStatus === "synced" &&
+      new Date(receipt.date) < cutoff
+    ) {
+      const localPath = `${RECEIPTS_DIR}${receipt.id}.jpg`;
+      const info = await FileSystem.getInfoAsync(localPath);
+      if (info.exists) {
+        await FileSystem.deleteAsync(localPath, { idempotent: true });
+      }
+    }
+  }
 }
 
 export function listenToReceipts(

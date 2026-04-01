@@ -1,9 +1,17 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    // TODO: Replace with proper rules in Plan 05
-    match /{allPaths=**} {
-      allow read, write: if request.auth != null;
+    // User's own receipts: only they can read/write
+    match /receipts/{userId}/{receiptId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Trip shared receipts: only trip members can read/write
+    match /trips/{tripId}/receipts/{receiptId} {
+      allow read: if request.auth != null &&
+        firestore.get(/databases/(default)/documents/trips/$(tripId)).data.memberUids.hasAny([request.auth.uid]);
+      allow write: if request.auth != null &&
+        firestore.get(/databases/(default)/documents/trips/$(tripId)).data.memberUids.hasAny([request.auth.uid]);
     }
   }
 }

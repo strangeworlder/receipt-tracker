@@ -1,6 +1,8 @@
 # Plan 7: Expense Splitting
 
 > **Prerequisite:** Plan 5 (Data Layer — `tripService.addExpense` and `useTripStore` must be in place).
+>
+> **Implementation status:** Complete. Implemented in `app/(tabs)/split.tsx` and `src/stores/splitStore.ts`.
 
 This plan implements both the equal-split screen and the advanced custom-split screen, and wires the "Save Split" action to persist an expense in Firestore via `tripService`.
 
@@ -11,6 +13,10 @@ This plan implements both the equal-split screen and the advanced custom-split s
 > **Rounded containers:** Add `borderCurve: 'continuous'` to `style` on any rounded View.
 >
 > **Safe area:** Use `contentInsetAdjustmentBehavior="automatic"` on `ScrollView`/`FlatList`.
+>
+> **`expo-blur` already installed:** `expo-blur ~15.0.8` is a project dependency — no `npx expo install expo-blur` needed. Import `BlurView` directly from `expo-blur`.
+>
+> **No toast utility:** The project has no `showToast` helper. Use `Alert.alert()` from `react-native` for user-facing validation and success messages.
 
 ---
 
@@ -36,10 +42,12 @@ File: `app/(tabs)/split.tsx`
 
 Shows the active or most recent split. If no split is active, show an empty state.
 
+**Empty-state trigger:** `totalAmount === 0`. The "Create Split" button seeds `totalAmount` to 150 (demo). After `saveSplit()` completes, `resetSplit()` sets `totalAmount` back to 0, which returns the screen to the empty state.
+
 ### Empty state:
-- Centered icon
+- Centered `call_split` icon in `bg-primary-container` circle
 - "No active splits" message
-- "Create Split" primary button
+- "Create Split" `PrimaryButton` — sets `totalAmount` to 150 to show the full split UI
 
 ### Active split:
 - Renders the split detail (Steps 2–7 below)
@@ -98,7 +106,7 @@ A prominent card showing the calculated per-person amount:
 3. **Left content:**
    - Label: "Calculated Split" — `text-white/80 text-[10px] font-black uppercase tracking-[0.2em]`
    - Amount: `$50.00 each` — `text-4xl font-black` with "each" in lighter weight
-4. **Right content:** Frosted glass container — `BlurView` from `expo-blur` with `bg-white/20 p-4 rounded-2xl` and a `groups` icon (CSS `backdrop-blur` is not supported in React Native)
+4. **Right content:** Frosted glass container — `BlurView` from `expo-blur` with `backgroundColor: 'rgba(255,255,255,0.2)'`, width/height 60, `borderRadius: 16` and a `groups` icon. CSS `backdrop-blur` is not supported in React Native — always use `BlurView`.
 
 The amount updates reactively: `totalAmount / activeParticipantCount`
 
@@ -160,27 +168,30 @@ The split summary card updates to show individual amounts.
 
 ```typescript
 // app/(tabs)/split.tsx — handleSaveSplit
+import { Alert } from "react-native";
 import { addExpense } from "@/services/tripService";
-import { useAuthStore } from "@/stores/authStore";
 
 async function handleSaveSplit(): Promise<void> {
-  const { totalAmount, splitMode, participants, paidBy, sharedItems } = useSplitStore.getState();
+  const { totalAmount, splitMode, participants, paidBy } = useSplitStore.getState();
   const activeTripId = useTripStore.getState().getAllTrips()[0]?.id; // or from route params
 
   // Validate
   const activeParticipants = participants.filter(p => p.isIncluded);
   if (activeParticipants.length < 2) {
-    showToast("At least 2 participants required");
+    Alert.alert("Not enough participants", "At least 2 participants required.");
     return;
   }
   if (totalAmount <= 0) {
-    showToast("Enter an amount greater than 0");
+    Alert.alert("No amount", "Enter an amount greater than 0.");
     return;
   }
   if (splitMode === "custom") {
-    const customTotal = activeParticipants.reduce((s, p) => s + (p.customAmount ?? 0), 0);
+    const customTotal = useSplitStore.getState().getCustomTotal();
     if (Math.abs(customTotal - totalAmount) > 0.01) {
-      showToast("Custom amounts must sum to the total");
+      Alert.alert(
+        "Amounts don't match",
+        `Custom amounts total $${customTotal.toFixed(2)} but bill is $${totalAmount.toFixed(2)}.`
+      );
       return;
     }
   }
@@ -202,9 +213,11 @@ async function handleSaveSplit(): Promise<void> {
   }
 
   useSplitStore.getState().resetSplit();
-  showToast("Split saved!");
+  Alert.alert("Split saved!", "The expense has been recorded.");
 }
 ```
+
+> **No `showToast` in this project.** Use `Alert.alert()` from `react-native` for all user-facing messages.
 
 Bottom CTA button:
 - **Style:** `w-full bg-primary text-on-primary font-black py-5 rounded-3xl shadow-lg shadow-primary/30`
@@ -216,10 +229,14 @@ Bottom CTA button:
 
 Replace the stub in `src/stores/splitStore.ts` with the full implementation:
 
+> **`SplitParticipant` is store-internal.** It is defined as a private interface inside `splitStore.ts` and is not exported to `src/types/index.ts`. It is distinct from `TripParticipant` — it carries split-specific fields (`isIncluded`, `customAmount`) that have no meaning outside the split flow.
+
 ```typescript
 import { create } from "zustand";
 import { generateUUID } from "@/utils/uuid";
+import type { TripParticipant } from "@/types";
 
+// Store-internal — not exported to types/index.ts
 interface SplitParticipant {
   id: string;
   name: string;
@@ -228,26 +245,42 @@ interface SplitParticipant {
   customAmount?: number;
 }
 
+// Store-internal — not exported to types/index.ts
+interface SharedItem {
+  id: string;
+  name: string;
+  price: number;
+  sharedBy: string[];
+}
+
 interface SplitState {
   totalAmount: number;
   splitMode: "equal" | "custom";
   participants: SplitParticipant[];
   paidBy: string;
-  sharedItems: Array<{
-    id: string;
-    name: string;
-    price: number;
-    sharedBy: string[];
-  }>;
+  sharedItems: SharedItem[];
 
+  // Actions
   setTotalAmount: (amount: number) => void;
   toggleParticipant: (id: string) => void;
   setSplitMode: (mode: "equal" | "custom") => void;
   setPaidBy: (id: string) => void;
   setCustomAmount: (participantId: string, amount: number) => void;
   addSharedItem: (item: { name: string; price: number }) => void;
-  getPerPersonAmount: () => number;
-  resetSplit: () => void;
+  removeSharedItem: (id: string) => void;
+  toggleSharedItemParticipant: (itemId: string, participantId: string) => void;
+
+  // Wires trip participants into the store (used by Plan 09 trip integration)
+  loadFromTrip: (participants: TripParticipant[]) => void;
+
+  // Computed helpers
+  getPerPersonAmount: () => number;   // totalAmount / includedCount
+  getCustomTotal: () => number;        // sum of customAmount for included participants
+
+  // Auto-distributes remaining amount among participants without custom amounts
+  autoBalance: () => void;
+
+  resetSplit: () => void;              // sets totalAmount → 0, clears customAmounts + sharedItems
 }
 
 const defaultParticipants: SplitParticipant[] = [
@@ -258,6 +291,7 @@ const defaultParticipants: SplitParticipant[] = [
 ];
 
 export const useSplitStore = create<SplitState>((set, get) => ({
+  // Initial store creation default: 150 (demo). resetSplit() sets to 0.
   totalAmount: 150,
   splitMode: "equal",
   participants: defaultParticipants,
@@ -283,16 +317,69 @@ export const useSplitStore = create<SplitState>((set, get) => ({
     set(s => ({
       sharedItems: [...s.sharedItems, { id: generateUUID(), ...item, sharedBy: [] }],
     })),
+  removeSharedItem: id =>
+    set(s => ({ sharedItems: s.sharedItems.filter(item => item.id !== id) })),
+  toggleSharedItemParticipant: (itemId, participantId) =>
+    set(s => ({
+      sharedItems: s.sharedItems.map(item =>
+        item.id === itemId
+          ? {
+              ...item,
+              sharedBy: item.sharedBy.includes(participantId)
+                ? item.sharedBy.filter(id => id !== participantId)
+                : [...item.sharedBy, participantId],
+            }
+          : item
+      ),
+    })),
+  loadFromTrip: (tripParticipants) => {
+    const participants: SplitParticipant[] = tripParticipants.map(tp => ({
+      id: tp.id,
+      name: tp.name,
+      avatarUri: tp.avatarUri,
+      isIncluded: true,
+      customAmount: undefined,
+    }));
+    set({
+      participants,
+      paidBy: participants[0]?.id ?? "",
+      sharedItems: [],
+      totalAmount: 0,
+      splitMode: "equal",
+    });
+  },
   getPerPersonAmount: () => {
     const { totalAmount, participants } = get();
     const active = participants.filter(p => p.isIncluded).length;
     return active > 0 ? totalAmount / active : 0;
   },
+  getCustomTotal: () => {
+    const { participants } = get();
+    return participants
+      .filter(p => p.isIncluded)
+      .reduce((sum, p) => sum + (p.customAmount ?? 0), 0);
+  },
+  autoBalance: () => {
+    const { totalAmount, participants } = get();
+    const included = participants.filter(p => p.isIncluded);
+    const withCustom = included.filter(p => p.customAmount !== undefined);
+    const withoutCustom = included.filter(p => p.customAmount === undefined);
+    const customTotal = withCustom.reduce((sum, p) => sum + (p.customAmount ?? 0), 0);
+    const remaining = totalAmount - customTotal;
+    const share = withoutCustom.length > 0 ? remaining / withoutCustom.length : 0;
+    set(s => ({
+      participants: s.participants.map(p => {
+        if (!p.isIncluded || p.customAmount !== undefined) return p;
+        return { ...p, customAmount: share };
+      }),
+    }));
+  },
   resetSplit: () =>
     set({
-      totalAmount: 0,
+      totalAmount: 0,  // ← 0, not 150; triggers the empty state on next render
       splitMode: "equal",
       participants: defaultParticipants.map(p => ({ ...p, customAmount: undefined })),
+      paidBy: "p1",
       sharedItems: [],
     }),
 }));
@@ -304,22 +391,25 @@ export const useSplitStore = create<SplitState>((set, get) => ({
 
 1. At least 2 participants must be sharing
 2. Total amount must be > 0
-3. In custom mode, warn if individual amounts don't sum to the total
+3. In custom mode, warn if individual amounts don't sum to the total (use `getCustomTotal()` from the store)
 4. Currency always formatted to 2 decimal places (use `formatCurrency` from `src/utils/format.ts`)
-5. Payer must be one of the included participants
+5. Payer must be one of the included participants — enforced at UI level: the payer picker modal only shows included participants
+6. All validation errors shown via `Alert.alert()` — no toast utility exists in the project
 
 ---
 
 ## Deliverables Checklist
 
-- [ ] `app/(tabs)/split.tsx` — entry screen with empty state or active split
-- [ ] Hero amount section with editable total
-- [ ] Participant selection grid with toggle interaction and reactive calculation
-- [ ] Split summary card (`BlurView` for frosted glass — not CSS `backdrop-blur`)
-- [ ] "Who Paid?" section with payer selection
-- [ ] Mode switcher between Equal and Custom
-- [ ] Advanced: shared items section
-- [ ] Advanced: per-participant custom amounts with auto-balance
-- [ ] `src/stores/splitStore.ts` — full implementation replacing Plan 01 scaffold
-- [ ] Save Split calls `tripService.addExpense` to persist to Firestore
-- [ ] Validation: min 2 participants, total > 0, custom amounts match total
+- [x] `app/(tabs)/split.tsx` — entry screen with empty state or active split
+- [x] Hero amount section with editable total (inline `TextInput`, commits on blur)
+- [x] Participant selection grid with toggle interaction and reactive calculation
+- [x] Split summary card (`BlurView` for frosted glass — not CSS `backdrop-blur`)
+- [x] "Who Paid?" section with payer selection (bottom-sheet modal)
+- [x] Mode switcher between Equal and Custom
+- [x] Advanced: shared items section (add/remove items)
+- [x] Advanced: per-participant custom amounts with auto-balance
+- [x] `src/stores/splitStore.ts` — full implementation replacing Plan 01 scaffold
+- [x] Save Split calls `tripService.addExpense` to persist to Firestore
+- [x] Validation: min 2 participants, total > 0, custom amounts match total (via `Alert.alert`)
+- [x] `src/stores/__tests__/splitStore.test.ts` — 39 unit tests, all passing
+- [x] New icon mappings in `MaterialIcon.tsx`: `groups`, `balance`, `savings`, `person_add`, `check_circle_outline`

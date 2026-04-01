@@ -1,0 +1,56 @@
+﻿node.exe : PASS src/services/__tests__/authService.test.ts
+At line:1 char:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (PASS src/servic...Service.test.ts:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+PASS src/services/__tests__/settlementService.test.ts
+PASS src/services/__tests__/syncService.test.ts
+PASS src/stores/__tests__/tripStore.test.ts
+PASS src/services/__tests__/userService.test.ts
+PASS src/services/__tests__/warrantyService.test.ts
+PASS src/stores/__tests__/warrantyStore.test.ts
+PASS src/stores/__tests__/authStore.test.ts
+PASS src/services/__tests__/tripService.test.ts
+PASS src/stores/__tests__/receiptStore.test.ts
+PASS src/services/__tests__/ocrService.test.ts
+PASS src/services/__tests__/driveService.test.ts
+PASS src/stores/__tests__/splitStore.test.ts
+PASS src/hooks/__tests__/useDashboardData.test.ts
+PASS src/services/__tests__/receiptService.test.ts
+  ΓùÅ Console
+
+    console.error
+      TypeError: _expoImageManipulator.ImageManipulator.manipulate(...).resize is not a function
+          at resize (C:\Users\alvan\receipt-tracker\src\services\receiptService.ts:106:6)
+          at Generator.next (<anonymous>)
+          at asyncGeneratorStep (C:\Users\alvan\receipt-tracker\node_modules\@babel\runtime\helpers\asyncToGenerator.js:3:17)
+          at _next (C:\Users\alvan\receipt-tracker\node_modules\@babel\runtime\helpers\asyncToGenerator.js:17:9)
+          at C:\Users\alvan\receipt-tracker\node_modules\@babel\runtime\helpers\asyncToGenerator.js:22:7
+          at new Promise (<anonymous>)
+          at C:\Users\alvan\receipt-tracker\node_modules\@babel\runtime\helpers\asyncToGenerator.js:14:12
+          at apply (C:\Users\alvan\receipt-tracker\src\services\receiptService.ts:110:2)
+          at apply (C:\Users\alvan\receipt-tracker\src\services\receiptService.ts:104:43)
+          at compressReceiptImage (C:\Users\alvan\receipt-tracker\src\services\receiptService.ts:117:31)
+          at Generator.next (<anonymous>)
+          at asyncGeneratorStep (C:\Users\alvan\receipt-tracker\node_modules\@babel\runtime\helpers\asyncToGenerator.js:3:17)
+          at _next (C:\Users\alvan\receipt-tracker\node_modules\@babel\runtime\helpers\asyncToGenerator.js:17:9)
+          at C:\Users\alvan\receipt-tracker\node_modules\@babel\runtime\helpers\asyncToGenerator.js:22:7
+          at new Promise (<anonymous>)
+          at C:\Users\alvan\receipt-tracker\node_modules\@babel\runtime\helpers\asyncToGenerator.js:14:12
+          at apply (C:\Users\alvan\receipt-tracker\src\services\receiptService.ts:130:2)
+          at apply (C:\Users\alvan\receipt-tracker\src\services\receiptService.ts:112:46)
+          at uploadToFirebaseStorage (C:\Users\alvan\receipt-tracker\src\services\receiptService.ts:64:3)
+          at Generator.next (<anonymous>)
+          at asyncGeneratorStep (C:\Users\alvan\receipt-tracker\node_modules\@babel\runtime\helpers\asyncToGenerator.js:3:17)
+          at _next (C:\Users\alvan\receipt-tracker\node_modules\@babel\runtime\helpers\asyncToGenerator.js:17:9)
+          at processTicksAndRejections (node:internal/process/task_queues:105:5)
+
+PASS app/(tabs)/__tests__/index.test.tsx
+
+Test Suites: 16 passed, 16 total
+Tests:       177 passed, 177 total
+Snapshots:   0 total
+Time:        6.204 s, estimated 23 s
+Ran all test suites.

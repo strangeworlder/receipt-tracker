@@ -9,6 +9,10 @@ This plan covers:
 3. **Deep Linking** — the scheme configuration and the invite landing route required for ghost-to-AppUser upgrades
 
 > **NativeWind v5 import rule:** Import `View`, `Text`, `ScrollView`, `Pressable`, `TextInput` from `@/tw` (not `react-native`). Import `Image` from `@/tw/image`. Raw React Native components silently ignore `className`.
+>
+> **`expo-blur` already installed:** `expo-blur ~15.0.8` is a project dependency — no `npx expo install` needed.
+>
+> **No toast utility:** The project has no `showToast` helper. Use `Alert.alert()` from `react-native` for user-facing messages.
 
 ---
 
@@ -169,6 +173,8 @@ async function shareInviteLink(inviteId: string, tripId: string): Promise<void> 
   });
 }
 ```
+
+> **Note:** As of Plan 06 implementation, `deleteReceipt()` in `receiptService.ts` now automatically handles Firebase Storage file cleanup in addition to Firestore doc and local file deletion. No separate Storage deletion step is needed here.
 
 ---
 

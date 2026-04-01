@@ -64,7 +64,7 @@ The Scans tab default view is a scrollable receipt list. The scanner is launched
 - `ScrollView` with `contentInsetAdjustmentBehavior="automatic"`
 - `TopAppBar` (shared) at top
 - Page title: "Receipts" — `font-headline text-2xl font-bold text-on-surface`
-- `headerSearchBarOptions` on the Stack screen for native iOS search
+- ~~`headerSearchBarOptions` on the Stack screen for native iOS search~~ (deferred — not yet implemented)
 
 ### Step A2: Filter Pills
 
@@ -118,9 +118,9 @@ File: `app/scanner.tsx` (full-screen modal — already registered in `app/_layou
 
 ### Step B1: Camera Permission Flow
 
-1. On first open, request camera permission via `Camera.requestCameraPermissionsAsync()`
-2. If denied, show a friendly message with a button to open settings
-3. Store permission state so the prompt only shows once
+1. On first open, request camera permission via `useCameraPermissions()` hook from `expo-camera`
+2. If denied and `!canAskAgain`, show a friendly message with a "Open Settings" button (`Linking.openSettings()`)
+3. Hook manages permission state automatically
 
 ### Step B2: Camera View
 
@@ -143,7 +143,8 @@ Top overlay bar:
 
 Capture button:
 1. Centered at bottom: large circular button (68x68) with white border ring
-2. Tap triggers `cameraRef.current.takePictureAsync({ quality: 0.8, base64: false })`
+2. Tap triggers `cameraRef.current.takePictureAsync({ quality: 0.8 })`
+3. **Haptics:** `Haptics.impactAsync(ImpactFeedbackStyle.Medium)` fires on iOS on capture (`process.env.EXPO_OS === "ios"`)
 
 Gallery button:
 - Opens `expo-image-picker` as alternative input
@@ -206,7 +207,7 @@ export async function processReceiptImage(imageUri: string): Promise<OCRResult> 
   return parseReceiptText(result.text ?? "");
 }
 
-function parseReceiptText(rawText: string): OCRResult {
+export function parseReceiptText(rawText: string): OCRResult {
   const lines = rawText.split("\n").map(l => l.trim()).filter(Boolean);
 
   // Merchant: usually the first non-empty line
@@ -220,7 +221,7 @@ function parseReceiptText(rawText: string): OCRResult {
     : new Date().toISOString().split("T")[0];
 
   // Total: look for the largest dollar amount near "total"
-  const totalPattern = /(?:total|amount due|balance)[^\d]*\$?([\d,]+\.\d{2})/i;
+  const totalPattern = /(?:\btotal|amount due|balance)[^\d]*\$?([\d,]+\.\d{2})/i;
   const totalMatch = rawText.match(totalPattern);
   const allAmounts = [...rawText.matchAll(/\$?([\d,]+\.\d{2})/g)]
     .map(m => parseFloat(m[1].replace(",", "")));
@@ -239,13 +240,20 @@ function parseReceiptText(rawText: string): OCRResult {
 
 function normalizeDateString(raw: string): string {
   const d = new Date(raw);
-  return isNaN(d.getTime())
-    ? new Date().toISOString().split("T")[0]
-    : d.toISOString().split("T")[0];
+  if (isNaN(d.getTime())) {
+    return new Date().toISOString().split("T")[0];
+  }
+  // Use local date parts to avoid UTC timezone shift
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 ```
 
 > **Note:** Receipt OCR parsing is inherently imperfect. The confidence score surfaces in the preview UI — when below 0.7, highlight fields for manual correction.
+>
+> **Implementation note:** `parseReceiptText` is exported (not private) to enable direct unit testing without mocking ML Kit. The total regex uses `\b` word boundary to prevent matching "Subtotal" before "Total". `normalizeDateString` uses local date parts (`getFullYear`/`getMonth`/`getDate`) instead of `.toISOString()` to avoid UTC timezone shift on dates parsed from receipt text.
 
 ---
 
@@ -382,9 +390,9 @@ export async function queueDriveUpload(
   merchant: string,
   date: string
 ): Promise<void> {
-  const existing = await getQueue();
+  const existing = getQueue();
   const entry: DriveUploadQueueEntry = { receiptId, localUri, merchant, date, attempts: 0 };
-  await saveQueue([...existing.filter(e => e.receiptId !== receiptId), entry]);
+  saveQueue([...existing.filter(e => e.receiptId !== receiptId), entry]);
 }
 
 export async function processQueue(): Promise<void> {
@@ -392,7 +400,7 @@ export async function processQueue(): Promise<void> {
   isProcessing = true;
 
   try {
-    const queue = await getQueue();
+    const queue = getQueue();
     if (queue.length === 0) return;
 
     const remaining: DriveUploadQueueEntry[] = [];
@@ -412,7 +420,7 @@ export async function processQueue(): Promise<void> {
       }
     }
 
-    await saveQueue(remaining);
+    saveQueue(remaining);
   } finally {
     isProcessing = false;
   }
@@ -426,12 +434,12 @@ export function startQueueProcessor(): () => void {
   });
 }
 
-async function getQueue(): Promise<DriveUploadQueueEntry[]> {
+function getQueue(): DriveUploadQueueEntry[] {
   const raw = localStorage.getItem(QUEUE_KEY);
   return raw ? JSON.parse(raw) : [];
 }
 
-async function saveQueue(queue: DriveUploadQueueEntry[]): Promise<void> {
+function saveQueue(queue: DriveUploadQueueEntry[]): void {
   localStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
 }
 
@@ -534,7 +542,7 @@ import { createReceiptRecord } from "@/services/receiptService";
 import { createFromReceipt } from "@/services/warrantyService";
 import { queueDriveUpload } from "@/services/driveService";
 import { useReceiptStore } from "@/stores/receiptStore";
-import auth from "@react-native-firebase/auth";
+// Note: auth is not imported here — requireAuth() inside createReceiptRecord handles it
 
 async function handleConfirmSave(
   ocrResult: OCRResult,
@@ -567,8 +575,7 @@ async function handleConfirmSave(
     syncStatus: "pending",
   });
 
-  // 5. Show success toast and navigate back
-  showToast("Receipt saved!");
+  // 5. Navigate back (toast deferred — no toast utility available yet)
   router.replace("/(tabs)/");
 }
 ```
@@ -630,35 +637,39 @@ Call `cleanupOldLocalFiles()` in `app/_layout.tsx` on AppState `"active"` event.
 ## Deliverables Checklist
 
 ### Part A: Scans Tab
-- [ ] `app/(tabs)/scans.tsx` — receipt list with filter pills, `ListItem` rows, `_pendingWrite` icon, empty state, FAB
+- [x] `app/(tabs)/scans.tsx` — receipt list with filter pills, category-colored rows, `_pendingWrite` icon, empty state, FAB
 
 ### Part B: Camera Scanner
-- [ ] `app/scanner.tsx` — full-screen modal camera with scanning overlay, flash toggle, gallery picker
-- [ ] Camera permission flow with settings redirect
-- [ ] Preview card with merchant, date, amount, category, warranty toggle
-- [ ] Retake / Confirm & Save buttons
-- [ ] Loading + error states
+- [x] `app/scanner.tsx` — full-screen modal camera with scanning overlay, flash toggle, gallery picker
+- [x] Camera permission flow via `useCameraPermissions()` hook with settings redirect
+- [x] Preview card with merchant, date, amount, category, warranty toggle
+- [x] Retake / Confirm & Save buttons
+- [x] Loading + error states (shimmer skeletons, spinner on save)
+- [ ] ~~`headerSearchBarOptions`~~ (deferred)
+- [ ] ~~`showToast`~~ (deferred — no toast utility yet)
 
 ### Part C: OCR
-- [ ] `src/services/ocrService.ts` — ML Kit text recognition + receipt parsing
-- [ ] Low-confidence badge (< 0.7) shown in preview card
+- [x] `src/services/ocrService.ts` — ML Kit text recognition + receipt parsing
+- [x] `parseReceiptText` exported for direct unit testing (8 tests)
+- [x] Low-confidence badge (< 0.7) shown in preview card
 
 ### Part D-E: Compression & Storage
-- [ ] `compressReceiptImage()` using new `ImageManipulator` chainable API
-- [ ] `uploadToFirebaseStorage()` — updates `firebaseStorageUrl` + `syncStatus: "synced"`
-- [ ] `shareReceiptWithTrip()` — uploads to trip Storage path
-- [ ] `storage.rules` deployed — trip receipts restricted to trip members
+- [x] `compressReceiptImage()` using new `ImageManipulator` chainable API
+- [x] `uploadToFirebaseStorage()` — updates `firebaseStorageUrl` + `syncStatus: "synced"`
+- [x] `shareReceiptWithTrip()` — uploads to trip Storage path
+- [x] `storage.rules` — per-user and per-trip rules written (not yet deployed)
 
 ### Part F: Drive Queue
-- [ ] `src/services/driveService.ts` — queue management, folder creation, multipart upload
-- [ ] `startQueueProcessor()` called in `app/_layout.tsx` after auth confirmed
-- [ ] `isRetry` flag prevents infinite recursion on persistent 401
-- [ ] Drive folder ID cached in `expo-sqlite localStorage`
+- [x] `src/services/driveService.ts` — queue management, folder creation, multipart upload
+- [x] `startQueueProcessor()` called in `app/_layout.tsx` after auth confirmed
+- [x] `isRetry` flag prevents infinite recursion on persistent 401
+- [x] Drive folder ID cached in `expo-sqlite localStorage`
+- [x] Queue helpers are synchronous (localStorage is sync)
 
 ### Part G: Save Flow
-- [ ] `handleConfirmSave` calls `createReceiptRecord` + `queueDriveUpload` + optimistic store update
-- [ ] Warranty entry created when toggle is on
+- [x] `handleConfirmSave` calls `createReceiptRecord` + `queueDriveUpload` + optimistic store update
+- [x] Warranty entry created when toggle is on
 
 ### Part H: Cleanup
-- [ ] `deleteReceipt` removes Firestore doc, Storage file, and local file
-- [ ] `cleanupOldLocalFiles` called on app foreground
+- [x] `deleteReceipt` removes Firestore doc, Storage file, and local file
+- [x] `cleanupOldLocalFiles` called on AppState `"active"` in `_layout.tsx`

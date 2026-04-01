@@ -7,27 +7,7 @@ import { TopAppBar } from "@/components/TopAppBar";
 import { MaterialIcon } from "@/components/MaterialIcon";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { colors } from "@/theme/colors";
-
-// ─── Helpers ────────────────────────────────────────────────────────────────
-
-function formatCurrency(amount: number): string {
-  return `$${amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",")}`;
-}
-
-function formatDate(dateString: string): string {
-  const d = new Date(dateString);
-  return d.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
-function daysUntil(dateString: string): number {
-  const now = new Date();
-  const target = new Date(dateString);
-  return Math.ceil((target.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-}
+import { formatCurrency, formatDate, daysUntil } from "@/utils/format";
 
 const RECEIPT_ICONS: Record<string, string> = {
   food: "local_cafe",

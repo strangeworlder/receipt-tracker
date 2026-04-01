@@ -13,6 +13,10 @@ This plan implements the warranty management screen where users can view, filter
 > **Safe area:** Use `contentInsetAdjustmentBehavior="automatic"` on `ScrollView`/`FlatList`.
 >
 > **No `AsyncStorage`:** Notification ID storage (for canceling scheduled notifications) uses `expo-sqlite localStorage`. The `warrantyService` in Plan 05 already handles this — IDs are stored in the Firestore `notificationIds[]` array, not in local storage directly.
+>
+> **`expo-blur` already installed:** `expo-blur ~15.0.8` is a project dependency — no `npx expo install` needed if you use `BlurView`.
+>
+> **No toast utility:** The project has no `showToast` helper. Use `Alert.alert()` from `react-native` for user-facing messages.
 
 ---
 

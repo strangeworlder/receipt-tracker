@@ -230,3 +230,99 @@ describe("listenToReceipts", () => {
     );
   });
 });
+
+describe("compressReceiptImage", () => {
+  it("calls ImageManipulator chain and returns the compressed URI", async () => {
+    const mockSaveAsync = jest.fn(() =>
+      Promise.resolve({ uri: "/compressed/photo.jpg" })
+    );
+    const mockRenderAsync = jest.fn(() =>
+      Promise.resolve({ saveAsync: mockSaveAsync })
+    );
+    const mockResize = jest.fn(() => ({ renderAsync: mockRenderAsync }));
+    const mockManipulate = jest.fn(() => ({ resize: mockResize }));
+
+    jest.doMock("expo-image-manipulator", () => ({
+      ImageManipulator: { manipulate: mockManipulate },
+    }));
+
+    jest.resetModules();
+    const { compressReceiptImage } = require("../receiptService");
+    const result = await compressReceiptImage("/tmp/photo.jpg");
+
+    expect(mockManipulate).toHaveBeenCalledWith("/tmp/photo.jpg");
+    expect(mockResize).toHaveBeenCalledWith({ width: 1200 });
+    expect(mockSaveAsync).toHaveBeenCalledWith(
+      expect.objectContaining({ format: "jpeg" })
+    );
+    expect(result).toBe("/compressed/photo.jpg");
+  });
+});
+
+describe("uploadToFirebaseStorage (full)", () => {
+  it("uploads compressed image, gets download URL, and updates Firestore", async () => {
+    const mockSaveAsync = jest.fn(() =>
+      Promise.resolve({ uri: "/compressed/photo.jpg" })
+    );
+    const mockRenderAsync = jest.fn(() =>
+      Promise.resolve({ saveAsync: mockSaveAsync })
+    );
+    const mockManipulate = jest.fn(() => ({
+      resize: jest.fn(() => ({ renderAsync: mockRenderAsync })),
+    }));
+
+    jest.doMock("expo-image-manipulator", () => ({
+      ImageManipulator: { manipulate: mockManipulate },
+    }));
+
+    jest.resetModules();
+
+    // Re-acquire mocks from fresh modules
+    const freshFirestore = require("@react-native-firebase/firestore");
+    const storage = require("@react-native-firebase/storage");
+    const storageInstance = storage();
+
+    const mockUpdate = jest.fn(() => Promise.resolve());
+    const mockDoc = jest.fn(() => ({ update: mockUpdate }));
+    (freshFirestore().collection as jest.Mock).mockReturnValue({ doc: mockDoc });
+
+    const { uploadToFirebaseStorage } = require("../receiptService");
+    const downloadUrl = await uploadToFirebaseStorage("rec-1", "/local/photo.jpg");
+
+    expect(storageInstance.ref).toHaveBeenCalled();
+    expect(downloadUrl).toBe("https://mock-storage.example.com/file");
+    expect(mockUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        firebaseStorageUrl: "https://mock-storage.example.com/file",
+        syncStatus: "synced",
+      })
+    );
+  });
+});
+
+describe("deleteReceipt (with Storage cleanup)", () => {
+  it("also deletes the Firebase Storage file", async () => {
+    jest.resetModules();
+
+    const freshFirestore = require("@react-native-firebase/firestore");
+    const storage = require("@react-native-firebase/storage");
+    const storageInstance = storage();
+
+    const mockDelete = jest.fn(() => Promise.resolve());
+    const mockDoc = jest.fn(() => ({ delete: mockDelete }));
+    (freshFirestore().collection as jest.Mock).mockReturnValue({ doc: mockDoc });
+
+    const FileSystem = require("expo-file-system/legacy");
+    FileSystem.getInfoAsync.mockResolvedValue({ exists: false });
+
+    // Mock auth().currentUser
+    const auth = require("@react-native-firebase/auth");
+    auth().currentUser = { uid: "uid-test" };
+
+    const { deleteReceipt } = require("../receiptService");
+    await deleteReceipt("rec-1");
+
+    expect(storageInstance.ref).toHaveBeenCalled();
+  });
+});
+

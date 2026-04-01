@@ -1,0 +1,49 @@
+PASS src/services/__tests__/syncService.test.ts
+PASS src/stores/__tests__/authStore.test.ts
+PASS src/services/__tests__/userService.test.ts
+PASS src/stores/__tests__/receiptStore.test.ts
+PASS src/stores/__tests__/warrantyStore.test.ts
+PASS src/services/__tests__/settlementService.test.ts (5.059 s)
+PASS src/services/__tests__/driveService.test.ts
+PASS src/services/__tests__/ocrService.test.ts
+PASS src/stores/__tests__/tripStore.test.ts (5.452 s)
+PASS src/services/__tests__/warrantyService.test.ts (5.707 s)
+PASS src/services/__tests__/tripService.test.ts (5.796 s)
+PASS src/services/__tests__/authService.test.ts (5.991 s)
+PASS src/services/__tests__/receiptService.test.ts
+  ● Console
+
+    console.error
+      TypeError: _expoImageManipulator.ImageManipulator.manipulate(...).resize is not a function
+          at resize (C:\Users\alvan\receipt-tracker\src\services\receiptService.ts:106:6)
+          at Generator.next (<anonymous>)
+          at asyncGeneratorStep (C:\Users\alvan\receipt-tracker\node_modules\@babel\runtime\helpers\asyncToGenerator.js:3:17)
+          at _next (C:\Users\alvan\receipt-tracker\node_modules\@babel\runtime\helpers\asyncToGenerator.js:17:9)
+          at C:\Users\alvan\receipt-tracker\node_modules\@babel\runtime\helpers\asyncToGenerator.js:22:7
+          at new Promise (<anonymous>)
+          at C:\Users\alvan\receipt-tracker\node_modules\@babel\runtime\helpers\asyncToGenerator.js:14:12
+          at apply (C:\Users\alvan\receipt-tracker\src\services\receiptService.ts:110:2)
+          at apply (C:\Users\alvan\receipt-tracker\src\services\receiptService.ts:104:43)
+          at compressReceiptImage (C:\Users\alvan\receipt-tracker\src\services\receiptService.ts:117:31)
+          at Generator.next (<anonymous>)
+          at asyncGeneratorStep (C:\Users\alvan\receipt-tracker\node_modules\@babel\runtime\helpers\asyncToGenerator.js:3:17)
+          at _next (C:\Users\alvan\receipt-tracker\node_modules\@babel\runtime\helpers\asyncToGenerator.js:17:9)
+          at C:\Users\alvan\receipt-tracker\node_modules\@babel\runtime\helpers\asyncToGenerator.js:22:7
+          at new Promise (<anonymous>)
+          at C:\Users\alvan\receipt-tracker\node_modules\@babel\runtime\helpers\asyncToGenerator.js:14:12
+          at apply (C:\Users\alvan\receipt-tracker\src\services\receiptService.ts:130:2)
+          at apply (C:\Users\alvan\receipt-tracker\src\services\receiptService.ts:112:46)
+          at uploadToFirebaseStorage (C:\Users\alvan\receipt-tracker\src\services\receiptService.ts:64:3)
+          at Generator.next (<anonymous>)
+          at asyncGeneratorStep (C:\Users\alvan\receipt-tracker\node_modules\@babel\runtime\helpers\asyncToGenerator.js:3:17)
+          at _next (C:\Users\alvan\receipt-tracker\node_modules\@babel\runtime\helpers\asyncToGenerator.js:17:9)
+          at processTicksAndRejections (node:internal/process/task_queues:105:5)
+
+PASS src/hooks/__tests__/useDashboardData.test.ts (10.217 s)
+PASS app/(tabs)/__tests__/index.test.tsx (22.334 s)
+
+Test Suites: 15 passed, 15 total
+Tests:       138 passed, 138 total
+Snapshots:   0 total
+Time:        27.083 s
+Ran all test suites.

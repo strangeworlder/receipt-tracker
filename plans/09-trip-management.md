@@ -22,6 +22,18 @@ This plan covers the entire Trips tab with 5 interconnected sub-screens: the tri
 - `useTripStore` now holds `trips: Record<string, Trip>`. Use `getAllTrips()` or `Object.values(trips)` for list rendering.
 - The `optimizeSettlements(participants, tripId)` function is available from `src/services/settlementService.ts` (Plan 05).
 - The trip creation route (`app/trips/new.tsx`) is implemented in Plan 10.
+- **Split integration (Plan 07):** `useSplitStore` exposes `loadFromTrip(participants: TripParticipant[])`. When navigating into a trip detail screen, call this to seed the Split tab with that trip's real participants instead of the demo mock data. Call it in the same `useEffect` that starts sync:
+  ```typescript
+  import { useSplitStore } from "@/stores/splitStore";
+  useEffect(() => {
+    startTripSync(tripId);
+    const trip = useTripStore.getState().getTrip(tripId);
+    if (trip) useSplitStore.getState().loadFromTrip(trip.participants);
+    return () => stopTripSync(tripId);
+  }, [tripId]);
+  ```
+- **`expo-blur` is already installed** (`expo-blur ~15.0.8`) — no `npx expo install` needed. The frosted-glass `BlurView` in Part C3 (Your Share Card) can be imported directly from `expo-blur`.
+- **No toast utility:** Use `Alert.alert()` from `react-native` for all user-facing messages. There is no `showToast` in this project.
 
 ---
 
