@@ -1,36 +1,34 @@
 import type { FirebaseFirestoreTypes } from "@react-native-firebase/firestore";
+import type { ReceiptCategory, CarpoolPassenger } from "./index";
 
 type Timestamp = FirebaseFirestoreTypes.Timestamp;
 
 export interface FirestoreUser {
   uid: string;
   displayName: string;
-  email: string | null;
-  photoURL: string | null;
-  isAnonymous: boolean;
+  email: string;
+  avatarUrl?: string;
+  fcmToken?: string;
+  googleDriveLinked: boolean;
   createdAt: Timestamp;
-  updatedAt: Timestamp;
 }
 
 export interface FirestoreReceipt {
-  id: string;
   userId: string;
   merchant: string;
   date: Timestamp;
   amount: number;
-  category: string;
-  items?: Array<{ name: string; quantity: number; price: number }>;
-  imageUri?: string;
-  storagePath?: string;
+  category: ReceiptCategory;
   isWarranty: boolean;
-  syncStatus: "synced" | "pending" | "error";
-  _pendingWrite?: boolean;
+  items?: Array<{ name: string; quantity: number; price: number }>;
+  firebaseStorageUrl?: string;
+  driveFileId?: string;
+  syncStatus: "local" | "pending" | "synced" | "error";
+  tripId?: string;
   createdAt: Timestamp;
-  updatedAt: Timestamp;
 }
 
 export interface FirestoreWarranty {
-  id: string;
   userId: string;
   receiptId: string;
   productName: string;
@@ -38,32 +36,28 @@ export interface FirestoreWarranty {
   purchaseDate: Timestamp;
   expirationDate: Timestamp;
   coverageType: string;
-  notificationScheduled: boolean;
-  createdAt: Timestamp;
-  updatedAt: Timestamp;
+  notificationIds: string[];
 }
 
 export interface FirestoreTrip {
-  id: string;
   name: string;
+  createdByUid: string;
   startDate: Timestamp;
   endDate: Timestamp;
-  createdBy: string;
-  participantIds: string[];
-  totalSpend: number;
+  memberUids: string[];
+  participants: FirestoreParticipant[];
   totalPot: number;
   categoryBreakdown: Record<string, number>;
-  _pendingWrite?: boolean;
   createdAt: Timestamp;
   updatedAt: Timestamp;
 }
 
 export interface FirestoreParticipant {
   id: string;
-  tripId: string;
   uid?: string;
   name: string;
   email?: string;
+  phone?: string;
   avatarUri?: string;
   isGhost: boolean;
   managedBy?: string;
@@ -72,7 +66,6 @@ export interface FirestoreParticipant {
 }
 
 export interface FirestoreExpense {
-  id: string;
   tripId: string;
   receiptId?: string;
   description: string;
@@ -81,36 +74,38 @@ export interface FirestoreExpense {
   splitAmong: string[];
   splitType: "equal" | "custom" | "percentage";
   customAmounts?: Record<string, number>;
-  _pendingWrite?: boolean;
+  createdByUid: string;
   createdAt: Timestamp;
-  updatedAt: Timestamp;
 }
 
 export interface FirestoreCarpool {
-  id: string;
   tripId: string;
   name: string;
   route: string;
   distance: number;
   fuelCost: number;
-  passengers: Array<{
-    participantId: string;
-    role: "driver" | "navigator" | "passenger";
-    amountOwed: number;
-    settled: boolean;
-  }>;
+  passengers: CarpoolPassenger[];
   createdAt: Timestamp;
-  updatedAt: Timestamp;
 }
 
 export interface FirestoreSettlement {
-  id: string;
   tripId: string;
   fromParticipantId: string;
   toParticipantId: string;
   amount: number;
   status: "pending" | "settled";
-  settledAt?: Timestamp;
   createdAt: Timestamp;
-  updatedAt: Timestamp;
+  settledAt?: Timestamp;
+}
+
+export interface FirestorePlannerItem {
+  tripId: string;
+  name: string;
+  description: string;
+  category: string;
+  categoryId: string;
+  assignedTo?: string;
+  status: "unassigned" | "assigned" | "brought";
+  createdByUid: string;
+  createdAt: Timestamp;
 }

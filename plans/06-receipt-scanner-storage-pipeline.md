@@ -251,7 +251,7 @@ function normalizeDateString(raw: string): string {
 
 ## Part D: Image Compression
 
-Add to `src/services/receiptService.ts`:
+Add to `src/services/receiptService.ts` (these are **additions** to the file created in Plan 05):
 
 > **API change (SDK 53+):** `manipulateAsync` has been removed. The new API is chainable: `ImageManipulator.manipulate(uri).resize(...).renderAsync()` followed by `image.saveAsync(options)`.
 
@@ -271,7 +271,7 @@ export async function compressReceiptImage(localUri: string): Promise<string> {
 
 ## Part E: Firebase Storage Upload
 
-Add to `src/services/receiptService.ts`:
+Replace the stub `uploadToFirebaseStorage` in `src/services/receiptService.ts` with the full implementation (the stub was added in Plan 05 — it returns an empty string and is called non-blocking from `createReceiptRecord`):
 
 ```typescript
 import storage from "@react-native-firebase/storage";
@@ -350,12 +350,14 @@ File: `src/services/driveService.ts`
 
 The Drive backup runs in the background and is resilient to network failures. The queue is stored in `expo-sqlite localStorage` (the global polyfill installed in `app/_layout.tsx`).
 
+> **expo-file-system v19 note:** `readAsStringAsync` and `EncodingType` are legacy APIs — import from `"expo-file-system/legacy"`, not `"expo-file-system"`. (Same rule as in Plan 05 `receiptService`.)
+
 ```typescript
 // expo-sqlite localStorage polyfill is installed once in app/_layout.tsx:
 //   import 'expo-sqlite/localStorage/install';
 // The global `localStorage` object is then available everywhere.
 
-import * as FileSystem from "expo-file-system";
+import * as FileSystem from "expo-file-system/legacy";
 import firestore from "@react-native-firebase/firestore";
 import NetInfo from "@react-native-community/netinfo";
 import { getGoogleAccessToken, refreshGoogleAccessToken } from "./authService";

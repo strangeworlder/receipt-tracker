@@ -1,6 +1,8 @@
 import React from "react";
 import { View, Text, Pressable } from "@/tw";
 import { twMerge } from "tailwind-merge";
+import { MaterialIcon } from "./MaterialIcon";
+import { colors } from "@/theme/colors";
 
 interface ListItemProps {
   title: string;
@@ -9,6 +11,7 @@ interface ListItemProps {
   right?: React.ReactNode;
   onPress?: () => void;
   className?: string;
+  pendingWrite?: boolean;
 }
 
 export function ListItem({
@@ -18,6 +21,7 @@ export function ListItem({
   right,
   onPress,
   className,
+  pendingWrite,
 }: ListItemProps) {
   const Container = onPress ? Pressable : View;
 
@@ -45,6 +49,13 @@ export function ListItem({
           </Text>
         )}
       </View>
+      {pendingWrite && (
+        <MaterialIcon
+          name="sync"
+          size={16}
+          color={colors.onSurfaceVariant}
+        />
+      )}
       {right && <View>{right}</View>}
     </Container>
   );

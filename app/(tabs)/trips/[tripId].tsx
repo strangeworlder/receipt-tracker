@@ -1,14 +1,21 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { ScrollView, View, Text, Pressable } from "@/tw";
 import { useLocalSearchParams, router } from "expo-router";
 import { useTripStore } from "@/stores/tripStore";
+import { startTripSync, stopTripSync } from "@/services/syncService";
 import { Card } from "@/components/Card";
 import { MaterialIcon } from "@/components/MaterialIcon";
 import { colors } from "@/theme/colors";
 
 export default function TripDetailScreen() {
   const { tripId } = useLocalSearchParams<{ tripId: string }>();
-  const trip = useTripStore((s) => s.getTripById(tripId));
+  const trip = useTripStore((s) => s.getTrip(tripId));
+
+  useEffect(() => {
+    if (!tripId) return;
+    startTripSync(tripId);
+    return () => stopTripSync(tripId);
+  }, [tripId]);
 
   if (!trip) {
     return (

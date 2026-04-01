@@ -1,9 +1,79 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // TODO: Replace with proper rules in Plan 05
-    match /{document=**} {
-      allow read, write: if request.auth != null;
+
+    function isAuthed() {
+      return request.auth != null;
+    }
+
+    function isTripMember(tripId) {
+      return isAuthed() &&
+        request.auth.uid in get(/databases/$(database)/documents/trips/$(tripId)).data.memberUids;
+    }
+
+    function isTripCreator(tripId) {
+      return isAuthed() &&
+        request.auth.uid == get(/databases/$(database)/documents/trips/$(tripId)).data.createdByUid;
+    }
+
+    match /users/{uid} {
+      allow read, update, delete: if isAuthed() && request.auth.uid == uid;
+      allow create: if isAuthed() && request.auth.uid == uid;
+    }
+
+    match /receipts/{receiptId} {
+      allow read, update, delete: if isAuthed() && request.auth.uid == resource.data.userId;
+      allow create: if isAuthed() && request.auth.uid == request.resource.data.userId;
+    }
+
+    match /warranties/{warrantyId} {
+      allow read, update, delete: if isAuthed() && request.auth.uid == resource.data.userId;
+      allow create: if isAuthed() && request.auth.uid == request.resource.data.userId;
+    }
+
+    match /trips/{tripId} {
+      allow read: if isTripMember(tripId);
+      allow create: if isAuthed() && request.auth.uid == request.resource.data.createdByUid;
+      allow update: if isTripMember(tripId);
+      allow delete: if isTripCreator(tripId);
+
+      match /expenses/{expenseId} {
+        allow read, create, update: if isTripMember(tripId);
+        allow delete: if isTripMember(tripId) &&
+          request.auth.uid == resource.data.createdByUid;
+      }
+
+      match /carpools/{carpoolId} {
+        allow read, create, update: if isTripMember(tripId);
+        allow delete: if isTripMember(tripId) &&
+          request.auth.uid == resource.data.createdByUid;
+      }
+
+      match /settlements/{settlementId} {
+        allow read, create: if isTripMember(tripId);
+        allow update: if isTripMember(tripId) && (
+          request.auth.uid == resource.data.fromParticipantId ||
+          request.auth.uid == resource.data.toParticipantId ||
+          isTripCreator(tripId)
+        );
+        allow delete: if isTripCreator(tripId);
+      }
+
+      match /plannerItems/{itemId} {
+        allow read, create, update: if isTripMember(tripId);
+        allow delete: if isTripMember(tripId) &&
+          request.auth.uid == resource.data.createdByUid;
+      }
+    }
+
+    match /tripInvitations/{inviteId} {
+      allow create: if isAuthed();
+      allow read: if isAuthed() &&
+        (request.auth.uid == resource.data.invitedByUid ||
+         request.auth.token.email == resource.data.inviteeEmail);
+      allow update: if isAuthed() &&
+        request.auth.token.email == resource.data.inviteeEmail &&
+        request.resource.data.status in ["accepted", "declined"];
     }
   }
 }

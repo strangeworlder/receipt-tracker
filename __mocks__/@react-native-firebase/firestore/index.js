@@ -3,6 +3,7 @@ const mockFirestore = {
   doc: jest.fn(() => mockFirestore),
   where: jest.fn(() => mockFirestore),
   orderBy: jest.fn(() => mockFirestore),
+  limit: jest.fn(() => mockFirestore),
   onSnapshot: jest.fn(() => jest.fn()),
   get: jest.fn(() =>
     Promise.resolve({ docs: [], exists: jest.fn(() => false), data: () => ({}) })

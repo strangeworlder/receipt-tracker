@@ -5,6 +5,7 @@ interface ReceiptState {
   receipts: Receipt[];
   loading: boolean;
   error: string | null;
+  setReceipts: (receipts: Receipt[]) => void;
   addReceipt: (receipt: Receipt) => void;
   updateReceipt: (id: string, updates: Partial<Receipt>) => void;
   deleteReceipt: (id: string) => void;
@@ -82,6 +83,8 @@ export const useReceiptStore = create<ReceiptState>((set, get) => ({
   receipts: mockReceipts,
   loading: false,
   error: null,
+
+  setReceipts: (receipts) => set({ receipts }),
 
   addReceipt: (receipt) =>
     set((state) => ({ receipts: [receipt, ...state.receipts] })),

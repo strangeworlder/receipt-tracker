@@ -23,6 +23,7 @@ export interface Receipt {
   imageUri?: string;
   isWarranty: boolean;
   syncStatus?: "synced" | "pending" | "error";
+  _pendingWrite?: boolean;
 }
 
 /** UI view model — see FirestoreWarranty in src/types/firestore.ts */
@@ -34,6 +35,7 @@ export interface Warranty {
   purchaseDate: string;
   expirationDate: string;
   coverageType: string;
+  _pendingWrite?: boolean;
 }
 
 export interface TripItem {
@@ -85,6 +87,7 @@ export interface Trip {
   settlements: SettlementTransaction[];
   totalPot: number;
   categoryBreakdown: Record<string, number>;
+  _pendingWrite?: boolean;
 }
 
 /** UI view model — see FirestoreExpense in src/types/firestore.ts */
@@ -98,6 +101,7 @@ export interface Expense {
   splitAmong: string[];
   splitType: "equal" | "custom" | "percentage";
   customAmounts?: Record<string, number>;
+  _pendingWrite?: boolean;
 }
 
 export interface Carpool {
@@ -108,6 +112,7 @@ export interface Carpool {
   distance: number;
   fuelCost: number;
   passengers: CarpoolPassenger[];
+  _pendingWrite?: boolean;
 }
 
 export interface CarpoolPassenger {
@@ -124,6 +129,7 @@ export interface SettlementTransaction {
   toParticipantId: string;
   amount: number;
   status: "pending" | "settled";
+  _pendingWrite?: boolean;
 }
 
 export interface AppUser {

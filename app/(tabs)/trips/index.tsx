@@ -8,7 +8,7 @@ import { AvatarStack } from "@/components/AvatarStack";
 import { useTripStore } from "@/stores/tripStore";
 
 export default function TripsScreen() {
-  const trips = useTripStore((s) => s.trips);
+  const trips = useTripStore((s) => s.getAllTrips());
 
   return (
     <View className="flex-1 bg-surface">

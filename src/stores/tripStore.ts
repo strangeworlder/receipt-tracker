@@ -1,173 +1,73 @@
 import { create } from "zustand";
-import type {
-  Trip,
-  TripParticipant,
-  Expense,
-  Carpool,
-  SettlementTransaction,
-} from "@/types";
+import type { Trip, Expense, Carpool, SettlementTransaction } from "@/types";
+import type { FirestorePlannerItem } from "@/types/firestore";
+
+type PlannerItem = FirestorePlannerItem & { id: string; _pendingWrite?: boolean };
 
 interface TripState {
-  trips: Trip[];
+  trips: Record<string, Trip>;
+  expenses: Record<string, Expense[]>;
+  carpools: Record<string, Carpool[]>;
+  settlements: Record<string, SettlementTransaction[]>;
+  plannerItems: Record<string, PlannerItem[]>;
   loading: boolean;
   error: string | null;
+
+  // Live data setters (called by syncService)
+  upsertTrip: (trip: Trip) => void;
+  setExpenses: (tripId: string, expenses: Expense[]) => void;
+  setCarpools: (tripId: string, carpools: Carpool[]) => void;
+  setSettlements: (tripId: string, settlements: SettlementTransaction[]) => void;
+  setPlannerItems: (tripId: string, items: PlannerItem[]) => void;
+
+  // UI actions
   addTrip: (trip: Trip) => void;
   updateTrip: (id: string, updates: Partial<Trip>) => void;
   deleteTrip: (id: string) => void;
-  getTripById: (id: string) => Trip | undefined;
-  addExpense: (tripId: string, expense: Expense) => void;
-  addCarpool: (tripId: string, carpool: Carpool) => void;
-  addSettlement: (tripId: string, settlement: SettlementTransaction) => void;
+  getTrip: (tripId: string) => Trip | undefined;
+  getAllTrips: () => Trip[];
 }
 
-const mockParticipants: TripParticipant[] = [
-  {
-    id: "p1",
-    uid: "uid-alice",
-    name: "Alice",
-    avatarUri: undefined,
-    isGhost: false,
-    amountPaid: 340.0,
-    amountOwed: 170.0,
-  },
-  {
-    id: "p2",
-    uid: "uid-bob",
-    name: "Bob",
-    avatarUri: undefined,
-    isGhost: false,
-    amountPaid: 85.0,
-    amountOwed: 170.0,
-  },
-  {
-    id: "p3",
-    name: "Carol",
-    avatarUri: undefined,
-    isGhost: true,
-    managedBy: "uid-alice",
-    amountPaid: 0,
-    amountOwed: 170.0,
-  },
-];
-
-const mockExpenses: Expense[] = [
-  {
-    id: "e1",
-    tripId: "t1",
-    description: "Dinner at The Lobster Shack",
-    amount: 255.0,
-    paidBy: "p1",
-    splitAmong: ["p1", "p2", "p3"],
-    splitType: "equal",
-  },
-  {
-    id: "e2",
-    tripId: "t1",
-    description: "Hotel deposit",
-    amount: 170.0,
-    paidBy: "p1",
-    splitAmong: ["p1", "p2", "p3"],
-    splitType: "equal",
-  },
-  {
-    id: "e3",
-    tripId: "t1",
-    description: "Fuel",
-    amount: 85.0,
-    paidBy: "p2",
-    splitAmong: ["p1", "p2", "p3"],
-    splitType: "equal",
-  },
-];
-
-const mockSettlements: SettlementTransaction[] = [
-  {
-    id: "s1",
-    tripId: "t1",
-    fromParticipantId: "p2",
-    toParticipantId: "p1",
-    amount: 85.0,
-    status: "pending",
-  },
-  {
-    id: "s2",
-    tripId: "t1",
-    fromParticipantId: "p3",
-    toParticipantId: "p1",
-    amount: 170.0,
-    status: "pending",
-  },
-];
-
-const mockTrips: Trip[] = [
-  {
-    id: "t1",
-    name: "Barcelona Summer 2026",
-    startDate: "2026-07-10",
-    endDate: "2026-07-20",
-    participants: mockParticipants,
-    totalSpend: 510.0,
-    categories: [],
-    carpools: [],
-    settlements: mockSettlements,
-    totalPot: 600.0,
-    categoryBreakdown: {
-      food: 255.0,
-      accommodation: 170.0,
-      transport: 85.0,
-    },
-  },
-];
-
 export const useTripStore = create<TripState>((set, get) => ({
-  trips: mockTrips,
+  trips: {},
+  expenses: {},
+  carpools: {},
+  settlements: {},
+  plannerItems: {},
   loading: false,
   error: null,
 
+  upsertTrip: (trip) =>
+    set((s) => ({ trips: { ...s.trips, [trip.id]: trip } })),
+
+  setExpenses: (tripId, expenses) =>
+    set((s) => ({ expenses: { ...s.expenses, [tripId]: expenses } })),
+
+  setCarpools: (tripId, carpools) =>
+    set((s) => ({ carpools: { ...s.carpools, [tripId]: carpools } })),
+
+  setSettlements: (tripId, settlements) =>
+    set((s) => ({ settlements: { ...s.settlements, [tripId]: settlements } })),
+
+  setPlannerItems: (tripId, items) =>
+    set((s) => ({ plannerItems: { ...s.plannerItems, [tripId]: items } })),
+
   addTrip: (trip) =>
-    set((state) => ({ trips: [trip, ...state.trips] })),
+    set((s) => ({ trips: { ...s.trips, [trip.id]: trip } })),
 
   updateTrip: (id, updates) =>
-    set((state) => ({
-      trips: state.trips.map((t) =>
-        t.id === id ? { ...t, ...updates } : t
-      ),
+    set((s) => ({
+      trips: { ...s.trips, [id]: { ...s.trips[id], ...updates } },
     })),
 
   deleteTrip: (id) =>
-    set((state) => ({ trips: state.trips.filter((t) => t.id !== id) })),
+    set((s) => {
+      const trips = { ...s.trips };
+      delete trips[id];
+      return { trips };
+    }),
 
-  getTripById: (id) => get().trips.find((t) => t.id === id),
+  getTrip: (tripId) => get().trips[tripId],
 
-  addExpense: (tripId, expense) =>
-    set((state) => ({
-      trips: state.trips.map((t) =>
-        t.id === tripId
-          ? {
-              ...t,
-              totalSpend: t.totalSpend + expense.amount,
-            }
-          : t
-      ),
-    })),
-
-  addCarpool: (tripId, carpool) =>
-    set((state) => ({
-      trips: state.trips.map((t) =>
-        t.id === tripId
-          ? { ...t, carpools: [...t.carpools, carpool] }
-          : t
-      ),
-    })),
-
-  addSettlement: (tripId, settlement) =>
-    set((state) => ({
-      trips: state.trips.map((t) =>
-        t.id === tripId
-          ? { ...t, settlements: [...t.settlements, settlement] }
-          : t
-      ),
-    })),
+  getAllTrips: () => Object.values(get().trips),
 }));
-
-export { mockExpenses };

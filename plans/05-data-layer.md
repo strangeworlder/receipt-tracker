@@ -374,7 +374,7 @@ function toISODate(ts: Timestamp | string | undefined): string {
 
 ---
 
-## 5a. Testing Note — `exists()` is a method
+## 5a. Testing Notes
 
 The `@react-native-firebase/firestore` TypeScript types define `DocumentSnapshot.exists` as a method (`exists(): boolean`), not a boolean property. Always call it:
 
@@ -399,22 +399,41 @@ get: jest.fn(() => Promise.resolve({ exists: true, data: () => myData }))
 
 The global `__mocks__/@react-native-firebase/firestore/index.js` already uses `jest.fn(() => false)`. When overriding `get` in individual test files, follow the same pattern.
 
+### Mock `requireAuth` via `jest.mock("../utils", ...)`
+
+Do NOT attempt to mock `@react-native-firebase/auth` directly inside individual test files. The global `__mocks__/@react-native-firebase/auth/index.js` already provides an `auth()` mock, and re-mocking it from within a test file leads to `mockReturnValue is not a function` errors. Instead, mock the `requireAuth` utility directly:
+
+```typescript
+// Correct — mock the utils module
+jest.mock("../utils", () => ({
+  requireAuth: jest.fn(() => "uid-test"),
+}));
+
+// Wrong — leads to "mockReturnValue is not a function"
+const mockAuth = require("@react-native-firebase/auth").default;
+(mockAuth as any).mockReturnValue({ currentUser: { uid: "uid-test" } });
+```
+
 ---
 
 ## 6. Service Layer Implementations
 
 ### `src/services/receiptService.ts`
 
+> **expo-file-system v19 note (SDK 54):** The legacy file-system APIs (`documentDirectory`, `getInfoAsync`, `copyAsync`, `deleteAsync`, `makeDirectoryAsync`) have moved to the `/legacy` subpath. Import from `"expo-file-system/legacy"`, not `"expo-file-system"`. The main package now exposes a class-based API (`File`, `Directory`, `Paths`) and the legacy exports throw at runtime if accessed from the root import.
+
+> **Collection reference pattern:** Do NOT call `firestore().collection(...)` at module load time (top-level constant). Wrap it in a factory function (`const receiptsCol = () => firestore().collection("receipts")`). Evaluating `firestore()` eagerly breaks Jest test isolation because the mock isn't yet configured when the module is imported.
+
 ```typescript
 import firestore from "@react-native-firebase/firestore";
-import * as FileSystem from "expo-file-system";
+import * as FileSystem from "expo-file-system/legacy";
 import { requireAuth } from "./utils";
 import { generateUUID } from "../utils/uuid";
 import type { FirestoreReceipt } from "../types/firestore";
 import type { ReceiptCategory, Receipt } from "../types";
 import type { OCRResult } from "./ocrService";
 
-const receiptsCol = firestore().collection("receipts");
+const receiptsCol = () => firestore().collection("receipts");
 const RECEIPTS_DIR = `${FileSystem.documentDirectory}receipts/`;
 
 function toISODate(ts: any): string {
@@ -448,7 +467,7 @@ export async function createReceiptRecord(
   const receiptId = generateUUID();
   const localUri = await saveImageLocally(localImageUri, receiptId);
 
-  await receiptsCol.doc(receiptId).set({
+  await receiptsCol().doc(receiptId).set({
     userId: uid,
     merchant: ocrResult.merchant,
     date: ocrResult.date,
@@ -472,13 +491,13 @@ export async function updateReceipt(
   updates: Partial<Pick<FirestoreReceipt, "merchant" | "date" | "amount" | "category" | "isWarranty">>
 ): Promise<void> {
   requireAuth();
-  await receiptsCol.doc(receiptId).update(updates);
+  await receiptsCol().doc(receiptId).update(updates);
 }
 
 export async function deleteReceipt(receiptId: string): Promise<void> {
   requireAuth();
   // Delete Firestore doc
-  await receiptsCol.doc(receiptId).delete();
+  await receiptsCol().doc(receiptId).delete();
   // Delete local file if it exists
   const localPath = `${RECEIPTS_DIR}${receiptId}.jpg`;
   const info = await FileSystem.getInfoAsync(localPath);
@@ -488,11 +507,19 @@ export async function deleteReceipt(receiptId: string): Promise<void> {
   // Firebase Storage deletion handled in Plan 06 uploadToFirebaseStorage
 }
 
+// Stub — full implementation in Plan 06
+export async function uploadToFirebaseStorage(
+  _receiptId: string,
+  _localUri: string
+): Promise<string> {
+  return "";
+}
+
 export function listenToReceipts(
   onUpdate: (receipts: Array<Receipt & { _pendingWrite: boolean }>) => void
 ): () => void {
   const uid = requireAuth();
-  return receiptsCol
+  return receiptsCol()
     .where("userId", "==", uid)
     .orderBy("date", "desc")
     .limit(50)
@@ -527,7 +554,7 @@ import type { FirestoreWarranty } from "../types/firestore";
 import type { Warranty } from "../types";
 import type { OCRResult } from "./ocrService";
 
-const warrantiesCol = firestore().collection("warranties");
+const warrantiesCol = () => firestore().collection("warranties");
 
 function toISODate(ts: any): string {
   if (!ts) return new Date().toISOString().split("T")[0];
@@ -548,7 +575,7 @@ export async function createWarranty(
       : (data.expirationDate as any).toDate().toISOString().split("T")[0]
   );
 
-  await warrantiesCol.doc(warrantyId).set({
+  await warrantiesCol().doc(warrantyId).set({
     ...data,
     userId: uid,
     notificationIds,
@@ -580,8 +607,10 @@ export async function updateWarranty(
   updates: Partial<Omit<FirestoreWarranty, "userId">>
 ): Promise<void> {
   requireAuth();
+  let finalUpdates: Record<string, unknown> = { ...updates };
+
   if (updates.expirationDate) {
-    const doc = await warrantiesCol.doc(warrantyId).get();
+    const doc = await warrantiesCol().doc(warrantyId).get();
     const existing = doc.data() as FirestoreWarranty;
     await cancelNotifications(existing.notificationIds ?? []);
 
@@ -591,24 +620,24 @@ export async function updateWarranty(
       (updates.productName ?? existing.productName) as string,
       newExpDate
     );
-    updates = { ...updates, notificationIds } as any;
+    finalUpdates = { ...finalUpdates, notificationIds };
   }
-  await warrantiesCol.doc(warrantyId).update(updates);
+  await warrantiesCol().doc(warrantyId).update(finalUpdates);
 }
 
 export async function deleteWarranty(warrantyId: string): Promise<void> {
   requireAuth();
-  const doc = await warrantiesCol.doc(warrantyId).get();
+  const doc = await warrantiesCol().doc(warrantyId).get();
   const data = doc.data() as FirestoreWarranty;
   await cancelNotifications(data.notificationIds ?? []);
-  await warrantiesCol.doc(warrantyId).delete();
+  await warrantiesCol().doc(warrantyId).delete();
 }
 
 export function listenToWarranties(
   onUpdate: (warranties: Array<Warranty & { _pendingWrite: boolean }>) => void
 ): () => void {
   const uid = requireAuth();
-  return warrantiesCol
+  return warrantiesCol()
     .where("userId", "==", uid)
     .orderBy("expirationDate", "asc")
     .onSnapshot(snap => {
@@ -684,7 +713,7 @@ import type {
 import type { TripParticipant, Trip, Expense, Carpool, SettlementTransaction } from "../types";
 import { getUserProfile } from "./userService";
 
-const tripsCol = firestore().collection("trips");
+const tripsCol = () => firestore().collection("trips");
 
 function toISODate(ts: any): string {
   if (!ts) return new Date().toISOString().split("T")[0];
@@ -700,7 +729,7 @@ export async function createTrip(
   const uid = requireAuth();
   const tripId = generateUUID();
   const now = new Date().toISOString();
-  await tripsCol.doc(tripId).set({
+  await tripsCol().doc(tripId).set({
     name: data.name,
     createdByUid: uid,
     startDate: data.startDate,
@@ -720,12 +749,12 @@ export async function updateTrip(
   updates: Partial<Pick<FirestoreTrip, "name" | "startDate" | "endDate" | "totalPot" | "categoryBreakdown">>
 ): Promise<void> {
   requireAuth();
-  await tripsCol.doc(tripId).update({ ...updates, updatedAt: new Date().toISOString() });
+  await tripsCol().doc(tripId).update({ ...updates, updatedAt: new Date().toISOString() });
 }
 
 export async function deleteTrip(tripId: string): Promise<void> {
   requireAuth();
-  await tripsCol.doc(tripId).delete();
+  await tripsCol().doc(tripId).delete();
 }
 
 // --- Participant management ---
@@ -746,7 +775,7 @@ export async function addGhostParticipant(
     amountPaid: 0,
     amountOwed: 0,
   };
-  await tripsCol.doc(tripId).update({
+  await tripsCol().doc(tripId).update({
     participants: firestore.FieldValue.arrayUnion(ghost),
   });
 }
@@ -759,7 +788,7 @@ export async function addExpense(
 ): Promise<string> {
   const uid = requireAuth();
   const expenseId = generateUUID();
-  await tripsCol.doc(tripId).collection("expenses").doc(expenseId).set({
+  await tripsCol().doc(tripId).collection("expenses").doc(expenseId).set({
     ...data,
     tripId,
     createdByUid: uid,
@@ -774,12 +803,12 @@ export async function updateExpense(
   updates: Partial<Omit<FirestoreExpense, "tripId" | "createdByUid" | "createdAt">>
 ): Promise<void> {
   requireAuth();
-  await tripsCol.doc(tripId).collection("expenses").doc(expenseId).update(updates);
+  await tripsCol().doc(tripId).collection("expenses").doc(expenseId).update(updates);
 }
 
 export async function deleteExpense(tripId: string, expenseId: string): Promise<void> {
   requireAuth();
-  await tripsCol.doc(tripId).collection("expenses").doc(expenseId).delete();
+  await tripsCol().doc(tripId).collection("expenses").doc(expenseId).delete();
 }
 
 // --- Invitations ---
@@ -795,7 +824,7 @@ export async function createInvitation(
   const expiresAt = new Date(now);
   expiresAt.setDate(expiresAt.getDate() + 7);
 
-  const tripDoc = await tripsCol.doc(tripId).get();
+  const tripDoc = await tripsCol().doc(tripId).get();
   const tripName = tripDoc.data()?.name ?? "";
   const profile = await getUserProfile(uid);
 
@@ -823,7 +852,7 @@ export function listenToTrip(
   tripId: string,
   onUpdate: (trip: Trip & { _pendingWrite: boolean }) => void
 ): () => void {
-  return tripsCol.doc(tripId).onSnapshot(snap => {
+  return tripsCol().doc(tripId).onSnapshot(snap => {
     if (!snap.exists()) return;
     const data = snap.data() as FirestoreTrip;
     onUpdate({
@@ -847,7 +876,7 @@ export function listenToExpenses(
   tripId: string,
   onUpdate: (expenses: Array<Expense & { _pendingWrite: boolean }>) => void
 ): () => void {
-  return tripsCol
+  return tripsCol()
     .doc(tripId).collection("expenses")
     .orderBy("createdAt", "desc")
     .onSnapshot(snap => {
@@ -873,7 +902,7 @@ export function listenToCarpools(
   tripId: string,
   onUpdate: (carpools: Array<Carpool & { _pendingWrite: boolean }>) => void
 ): () => void {
-  return tripsCol.doc(tripId).collection("carpools")
+  return tripsCol().doc(tripId).collection("carpools")
     .orderBy("createdAt", "asc")
     .onSnapshot(snap => {
       onUpdate(snap.docs.map(d => {
@@ -896,7 +925,7 @@ export function listenToSettlements(
   tripId: string,
   onUpdate: (settlements: Array<SettlementTransaction & { _pendingWrite: boolean }>) => void
 ): () => void {
-  return tripsCol.doc(tripId).collection("settlements")
+  return tripsCol().doc(tripId).collection("settlements")
     .orderBy("createdAt", "desc")
     .onSnapshot(snap => {
       onUpdate(snap.docs.map(d => {
@@ -918,7 +947,7 @@ export function listenToPlannerItems(
   tripId: string,
   onUpdate: (items: Array<FirestorePlannerItem & { id: string; _pendingWrite: boolean }>) => void
 ): () => void {
-  return tripsCol.doc(tripId).collection("plannerItems")
+  return tripsCol().doc(tripId).collection("plannerItems")
     .orderBy("createdAt", "asc")
     .onSnapshot(snap => {
       onUpdate(snap.docs.map(d => ({
@@ -1151,12 +1180,16 @@ export const useTripStore = create<TripState>((set, get) => ({
 
 ## 9. Pending Write Indicator
 
-Firestore documents include `metadata.hasPendingWrites`. Each listener maps this to a `_pendingWrite` flag (already done in the service implementations above). Show a spinning `sync` icon on `ListItem` rows when `_pendingWrite` is true:
+Firestore documents include `metadata.hasPendingWrites`. Each listener maps this to a `_pendingWrite` flag (already done in the service implementations above). Show a `sync` icon on `ListItem` rows when `_pendingWrite` is true.
+
+> **`MaterialIcon` has no `className` prop** — it wraps `@expo/vector-icons` which takes `color` and `size` props. Pass color via the `color` prop. NativeWind `animate-spin` does not apply to native icon components; omit it.
 
 ```typescript
-// In ListItem or any receipt/trip row:
+// In ListItem (src/components/ListItem.tsx):
+import { colors } from "@/theme/colors";
+
 {item._pendingWrite && (
-  <MaterialIcon name="sync" size={16} className="text-on-surface-variant animate-spin" />
+  <MaterialIcon name="sync" size={16} color={colors.onSurfaceVariant} />
 )}
 ```
 
@@ -1168,13 +1201,13 @@ The `participants` array on the trip document stores full `TripParticipant` obje
 
 ```typescript
 // Adding a participant
-await tripsCol.doc(tripId).update({
+await tripsCol().doc(tripId).update({
   participants: firestore.FieldValue.arrayUnion(newParticipant),
   memberUids: firestore.FieldValue.arrayUnion(newParticipant.uid ?? newParticipant.id),
 });
 
 // Removing a participant
-await tripsCol.doc(tripId).update({
+await tripsCol().doc(tripId).update({
   participants: firestore.FieldValue.arrayRemove(existingParticipant),
   memberUids: firestore.FieldValue.arrayRemove(existingParticipant.uid ?? existingParticipant.id),
 });

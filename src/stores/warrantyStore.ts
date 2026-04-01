@@ -5,6 +5,7 @@ interface WarrantyState {
   warranties: Warranty[];
   loading: boolean;
   error: string | null;
+  setWarranties: (warranties: Warranty[]) => void;
   addWarranty: (warranty: Warranty) => void;
   updateWarranty: (id: string, updates: Partial<Warranty>) => void;
   deleteWarranty: (id: string) => void;
@@ -52,6 +53,8 @@ export const useWarrantyStore = create<WarrantyState>((set, get) => ({
   warranties: mockWarranties,
   loading: false,
   error: null,
+
+  setWarranties: (warranties) => set({ warranties }),
 
   addWarranty: (warranty) =>
     set((state) => ({ warranties: [warranty, ...state.warranties] })),
