@@ -20,6 +20,7 @@ export interface FirestoreReceipt {
   amount: number;
   category: ReceiptCategory;
   isWarranty: boolean;
+  confidence?: number;
   items?: Array<{ name: string; quantity: number; price: number }>;
   firebaseStorageUrl?: string;
   driveFileId?: string;

@@ -54,6 +54,7 @@ export async function createReceiptRecord(
     amount: ocrResult.amount,
     category,
     isWarranty,
+    confidence: ocrResult.confidence,
     items: ocrResult.items,
     syncStatus: "local",
     tripId: tripId ?? null,
@@ -68,12 +69,13 @@ export async function createReceiptRecord(
 
 export async function updateReceipt(
   receiptId: string,
-  updates: Partial<
-    Pick<
-      FirestoreReceipt,
-      "merchant" | "date" | "amount" | "category" | "isWarranty"
-    >
-  >
+  updates: {
+    merchant?: string;
+    date?: string;
+    amount?: number;
+    category?: ReceiptCategory;
+    isWarranty?: boolean;
+  }
 ): Promise<void> {
   requireAuth();
   await receiptsCol().doc(receiptId).update(updates);
@@ -187,6 +189,8 @@ export function listenToReceipts(
             amount: data.amount,
             category: data.category,
             isWarranty: data.isWarranty,
+            confidence: data.confidence,
+            tripId: data.tripId ?? undefined,
             items: data.items,
             imageUri: data.firebaseStorageUrl,
             syncStatus:

@@ -93,6 +93,31 @@ describe("createReceiptRecord", () => {
     );
   });
 
+  it("persists the OCR confidence score to Firestore", async () => {
+    const FileSystem = require("expo-file-system/legacy");
+    FileSystem.getInfoAsync.mockResolvedValue({ exists: true });
+    FileSystem.copyAsync.mockResolvedValue(undefined);
+
+    const mockSet = jest.fn(() => Promise.resolve());
+    const mockDoc = jest.fn(() => ({ set: mockSet }));
+    (firestore().collection as jest.Mock).mockReturnValue({ doc: mockDoc });
+
+    const { createReceiptRecord } = require("../receiptService");
+    const ocr = {
+      merchant: "Low Confidence Store",
+      date: "2026-01-15",
+      amount: 12.0,
+      items: [],
+      confidence: 0.5,
+    };
+
+    await createReceiptRecord(ocr, "/tmp/img.jpg", "food", false);
+
+    expect(mockSet).toHaveBeenCalledWith(
+      expect.objectContaining({ confidence: 0.5 })
+    );
+  });
+
   it("throws when not authenticated", async () => {
     const utils = require("../utils");
     utils.requireAuth.mockImplementationOnce(() => {
@@ -225,6 +250,49 @@ describe("listenToReceipts", () => {
           id: "r1",
           date: "2026-03-15",
           _pendingWrite: true,
+        }),
+      ])
+    );
+  });
+
+  it("maps the confidence score from Firestore data to the UI receipt shape", () => {
+    const fakeDocs = [
+      {
+        id: "r2",
+        metadata: { hasPendingWrites: false },
+        data: () => ({
+          merchant: "Blurry Receipt",
+          date: "2026-03-20",
+          amount: 9.99,
+          category: "food",
+          isWarranty: false,
+          confidence: 0.45,
+          syncStatus: "synced",
+          items: [],
+        }),
+      },
+    ];
+    const mockOnSnapshot = jest.fn((cb) => {
+      cb({ docs: fakeDocs });
+      return jest.fn();
+    });
+    const chain = {
+      where: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
+      onSnapshot: mockOnSnapshot,
+    };
+    (firestore().collection as jest.Mock).mockReturnValue(chain);
+
+    const { listenToReceipts } = require("../receiptService");
+    const onUpdate = jest.fn();
+    listenToReceipts(onUpdate);
+
+    expect(onUpdate).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: "r2",
+          confidence: 0.45,
         }),
       ])
     );

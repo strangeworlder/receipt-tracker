@@ -22,6 +22,8 @@ export interface Receipt {
   items?: ReceiptItem[];
   imageUri?: string;
   isWarranty: boolean;
+  confidence?: number;
+  tripId?: string;
   syncStatus?: "synced" | "pending" | "error";
   _pendingWrite?: boolean;
 }

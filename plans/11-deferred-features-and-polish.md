@@ -27,7 +27,7 @@ Each item references the plan or file where the deferral was documented.
 
 ## Part A: Receipt Detail Screen — Full Implementation
 
-> **Origin:** Plan 10 Part B defines the full receipt detail screen. The current `app/receipts/[receiptId].tsx` (63 lines) is a minimal skeleton showing only date, amount, and category in a single Card. Plan 10 specifies image viewer, inline editing, warranty link, trip link, delete flow, and share action.
+> **Origin:** Plan 10 Part B defines the full receipt detail screen. ~~The current `app/receipts/[receiptId].tsx` (63 lines) is a minimal skeleton showing only date, amount, and category in a single Card.~~ **Done in Plan 10.** Implemented with all 5 sections below.
 
 File: `app/receipts/[receiptId].tsx`
 
@@ -52,11 +52,13 @@ File: `app/receipts/[receiptId].tsx`
    - Category: capitalized badge
 3. Low-confidence badge: if `receipt.confidence < 0.7` — `bg-error-container text-on-error-container text-xs rounded-full px-3 py-1` "Low confidence — please verify"
 
+> **Implementation note (Plan 10):** `confidence` was not previously persisted. Added `confidence?: number` to `FirestoreReceipt`, `Receipt`, and the `receiptService` pipeline with two new TDD tests.
+
 ### Step A3: Inline Editing Mode
 
 1. "Edit" button toggles all fields into editable `TextInput` components
 2. Amount uses `keyboardType="decimal-pad"`
-3. Category uses `@react-native-picker/picker` dropdown
+3. Category uses a horizontal ScrollView of Pressable chip buttons (**not** `@react-native-picker/picker` — avoids a native dependency)
 4. "Save" button calls `receiptService.updateReceipt(receiptId, updates)`
 5. "Cancel" reverts to saved values
 
@@ -79,7 +81,9 @@ File: `app/receipts/[receiptId].tsx`
 
 1. **Edit** (secondary): puts fields into edit mode (Step A3)
 2. **Share**: opens native `Share.share()` with receipt image
-3. **Delete** (destructive, text-only): confirmation dialog using `Alert.alert()`, then calls `deleteReceipt(receiptId)` + deletes linked warranty if `receipt.isWarranty`
+3. "Delete" (destructive, text-only): confirmation dialog using `Alert.alert()`, then calls `deleteReceipt(receiptId)` + deletes linked warranty if `receipt.isWarranty`
+
+> **Implementation note (Plan 10):** Google Drive backups are intentionally preserved on delete. Only the Firestore document, Firebase Storage file, and local filesystem copy are removed. Users manage their Drive folder independently.
 
 ---
 
@@ -211,7 +215,7 @@ Deploy: `firebase deploy --only functions`
 
 ## Part D: Deep Link — Invite Landing Route
 
-> **Origin:** Plan 10 Part C defines the invite landing screen `app/invite/[inviteId].tsx`. The route is not yet registered in `app/_layout.tsx` and the file does not exist.
+> **Origin:** Plan 10 Part C defines the invite landing screen `app/invite/[inviteId].tsx`. ~~The route is not yet registered in `app/_layout.tsx` and the file does not exist.~~ **Done in Plan 10.**
 
 ### Step D1: Create `app/invite/[inviteId].tsx`
 
@@ -447,11 +451,11 @@ Update the "Implementation Plans" table to reflect reality:
 ## Deliverables Checklist
 
 ### Part A: Receipt Detail — Full Implementation
-- [ ] `app/receipts/[receiptId].tsx` rewritten with image viewer, data card, warranty/trip links, actions row
-- [ ] Inline editing for merchant, date, amount, category
-- [ ] Delete flow with warranty cascade
-- [ ] Share action via `Share.share()`
-- [ ] Sync status badge overlay on image
+- [x] `app/receipts/[receiptId].tsx` rewritten with image viewer, data card, warranty/trip links, actions row
+- [x] Inline editing for merchant, date, amount, category (chip row — not `@react-native-picker/picker`)
+- [x] Delete flow with warranty cascade; Google Drive backup preserved
+- [x] Share action via `Share.share()`
+- [x] Sync status badge overlay on image
 
 ### Part B: Warranty Card Context Menu
 - [ ] `more_vert` wired to action sheet (View Receipt, Edit, Delete, Cancel)
@@ -465,8 +469,8 @@ Update the "Implementation Plans" table to reflect reality:
 - [ ] Cloud Function deployed
 
 ### Part D: Deep Link — Invite Landing
-- [ ] `app/invite/[inviteId].tsx` created per Plan 10 Part C
-- [ ] Route registered in `app/_layout.tsx`
+- [x] `app/invite/[inviteId].tsx` created per Plan 10 Part C
+- [x] Route registered in `app/_layout.tsx`
 
 ### Part E: Toast/Snackbar Utility
 - [ ] `src/components/Toast.tsx` with animated slide-down + auto-dismiss

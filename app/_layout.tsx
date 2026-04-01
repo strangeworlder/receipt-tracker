@@ -156,6 +156,10 @@ export default function RootLayout() {
           options={{ headerShown: false }}
         />
         <Stack.Screen
+          name="invite/[inviteId]"
+          options={{ headerShown: false }}
+        />
+        <Stack.Screen
           name="scanner"
           options={{
             presentation: "fullScreenModal",

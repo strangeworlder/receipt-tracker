@@ -65,11 +65,10 @@ File: `app/trips/new.tsx`
 **Section 2 — Participants:**
 - Header: "Who's coming?" with "Add Person" button
 - Existing participant chips: removable pills for each added participant
-- **Add AppUser:** Email input → look up `users` collection by email:
-  - Found: show avatar + name for confirmation → add as `{ isGhost: false, uid: foundUid, name: foundName }`
-  - Not found: offer "Add [name] as a guest (no account needed)" → add as ghost
-- **Add GhostParticipant:** Ask for name + optional phone/email → `{ isGhost: true, name, email?, phone? }`
-- The current user is always the first participant and cannot be removed
+- **Add Participant (ghost only):** Inline form collects name (required) + optional email + optional phone → always stored as `{ isGhost: true, name, email?, phone? }`
+  - **No email lookup.** The system does not query the `users` collection to check if the invitee has an account. All added participants are ghost participants at creation time.
+  - Ghost → AppUser resolution happens later when the invitee taps the deep link and `resolveGhostParticipant` Cloud Function matches by email.
+- The current user is always the first participant (non-ghost, non-removable)
 
 **Section 3 — Invite Link:**
 - "Generate Invite Link" button → calls `tripService.createInvitation` → shows shareable link
@@ -82,10 +81,8 @@ interface NewTripFormState {
   name: string;
   startDate: string;
   endDate: string;
-  participants: Array<
-    | { isGhost: false; uid: string; name: string; avatarUri?: string }
-    | { isGhost: true; name: string; email?: string; phone?: string }
-  >;
+  // All added participants are ghost type — no email lookup performed
+  participants: Array<{ isGhost: true; name: string; email?: string; phone?: string }>;
 }
 ```
 
@@ -103,7 +100,7 @@ async function handleCreateTrip(form: NewTripFormState): Promise<void> {
   const currentUserProfile = await getUserProfile(uid);
 
   const participants: TripParticipant[] = [
-    // Current user always first
+    // Current user always first (isGhost: false)
     {
       id: uid,
       uid,
@@ -113,27 +110,17 @@ async function handleCreateTrip(form: NewTripFormState): Promise<void> {
       amountPaid: 0,
       amountOwed: 0,
     },
-    ...form.participants.map(p =>
-      p.isGhost
-        ? {
-            id: generateUUID(),
-            name: p.name,
-            email: p.email,
-            isGhost: true as const,
-            managedBy: uid,
-            amountPaid: 0,
-            amountOwed: 0,
-          }
-        : {
-            id: p.uid,
-            uid: p.uid,
-            name: p.name,
-            avatarUri: p.avatarUri,
-            isGhost: false as const,
-            amountPaid: 0,
-            amountOwed: 0,
-          }
-    ),
+    // All added participants are ghost — no AppUser lookup
+    ...form.participants.map(p => ({
+      id: generateUUID(),
+      name: p.name,
+      email: p.email,
+      phone: p.phone,
+      isGhost: true as const,
+      managedBy: uid,
+      amountPaid: 0,
+      amountOwed: 0,
+    })),
   ];
 
   const tripId = await createTrip({
@@ -143,11 +130,11 @@ async function handleCreateTrip(form: NewTripFormState): Promise<void> {
     participants,
   });
 
-  // Create invitations for AppUser participants (not ghosts)
-  const appUserParticipants = form.participants.filter(p => !p.isGhost) as Array<{ uid: string; email?: string }>;
-  await Promise.all(
-    appUserParticipants.map(p => createInvitation(tripId, p.uid, p.email))
-  );
+  // Create invitations for ghost participants that have an email
+  const emailParticipants = form.participants.filter(p => p.email);
+  for (const p of emailParticipants) {
+    await createInvitation(tripId, uid, p.email!);
+  }
 
   router.replace(`/(tabs)/trips/${tripId}`);
 }
@@ -177,6 +164,10 @@ async function shareInviteLink(inviteId: string, tripId: string): Promise<void> 
 ```
 
 > **Note:** As of Plan 06 implementation, `deleteReceipt()` in `receiptService.ts` now automatically handles Firebase Storage file cleanup in addition to Firestore doc and local file deletion. No separate Storage deletion step is needed here.
+
+> **Implementation Amendment (Plan 10):** The `updateReceipt` function signature was changed from `Partial<Pick<FirestoreReceipt, ...>>` to a plain object `{ merchant?, date?: string, amount?, category?, isWarranty? }` to avoid requiring callers to pass Firestore `Timestamp` objects for the `date` field. The client always works with ISO date strings.
+
+> **Implementation Amendment (Plan 10):** An optional `confidence?: number` field was added to `FirestoreReceipt`, `Receipt` (UI type), and the `receiptService` persistence/listener pipeline. `OCRResult` already included this field from Plan 06 but it was not being stored in Firestore. Two TDD tests were added covering both the persistence and mapping paths.
 
 ---
 
@@ -247,6 +238,7 @@ export default function ReceiptDetailScreen() {
 When the user taps "Edit":
 - Fields switch from display text to `TextInput`
 - Amount uses `keyboardType="decimal-pad"`
+- Category uses a horizontal ScrollView of Pressable chip buttons (not `@react-native-picker/picker`)
 - Save button: calls `receiptService.updateReceipt(receiptId, updates)` from Plan 05
 - On save, show `Alert.alert("Saved", "Receipt updated.")`
 
@@ -467,23 +459,23 @@ Add to `firestore.indexes.json` (already covered in Plan 05):
 ## Deliverables Checklist
 
 ### Part A: Trip Creation
-- [ ] `app/trips/new.tsx` — create trip form with name, dates, participant search/add
-- [ ] AppUser participant search by email (Firestore `users` collection lookup)
-- [ ] GhostParticipant add flow (name + optional contact); uses `isGhost: true` (not `type: "ghost"`)
-- [ ] `handleCreateTrip` maps form state to `TripParticipant[]` with correct field names (`name`, `isGhost`, `uid`)
-- [ ] Invite link generated and shared via `Share.share()`
+- [x] `app/trips/new.tsx` — create trip form with name, dates, participant add
+- [x] ~~AppUser participant search by email~~ **Not implemented** — all added participants are ghost. Ghost → AppUser resolution happens via deep link / `resolveGhostParticipant`.
+- [x] GhostParticipant add flow (name + optional email/phone); uses `isGhost: true`
+- [x] `handleCreateTrip` maps form state to `TripParticipant[]` with correct field names
+- [x] Invite link generated post-save and shared via `Share.share()`
 
 ### Part B: Receipt Detail
-- [ ] `app/receipts/[receiptId].tsx` — image viewer, data card, linked warranty/expense sections
-- [ ] Image loads from `receipt.imageUri` (Firebase Storage URL) or local filesystem fallback
-- [ ] Inline editing for all OCR-extracted fields
-- [ ] Low-confidence OCR badge when `confidence < 0.7`
-- [ ] Delete flow with confirmation dialog; also deletes linked warranty if `isWarranty === true`
-- [ ] All receipt row taps throughout the app navigate to `app/receipts/[receiptId]`
+- [x] `app/receipts/[receiptId].tsx` — image viewer, data card, linked warranty/expense sections
+- [x] Image loads from `receipt.imageUri` (Firebase Storage URL) or local filesystem fallback (conditional render — not `placeholder` prop)
+- [x] Inline editing for all OCR-extracted fields; category uses chip row not `@react-native-picker/picker`
+- [x] Low-confidence OCR badge when `confidence < 0.7` (requires `confidence` field added to `Receipt` + `FirestoreReceipt`)
+- [x] Delete flow with confirmation dialog; also deletes linked warranty if `isWarranty === true`; Google Drive backup preserved
+- [x] All receipt row taps throughout the app navigate to `app/receipts/[receiptId]`
 
 ### Part C: Deep Linking
-- [ ] `app/invite/[inviteId].tsx` — invite landing with join + sign-in flows
-- [ ] `invite/[inviteId]` Stack.Screen registered in `app/_layout.tsx`
-- [ ] `handleJoin` calls `resolveGhostParticipant` Cloud Function (deployed in Plan 04)
-- [ ] Onboarding `redirect` param handled for post-sign-in navigation (implemented in Plan 04)
-- [ ] `tripInvitations` composite index in `firestore.indexes.json` (Plan 05)
+- [x] `app/invite/[inviteId].tsx` — invite landing with join + sign-in flows
+- [x] `invite/[inviteId]` Stack.Screen registered in `app/_layout.tsx`
+- [x] `handleJoin` calls `resolveGhostParticipant` Cloud Function (deployed in Plan 04)
+- [x] Onboarding `redirect` param handled for post-sign-in navigation (implemented in Plan 04)
+- [x] `tripInvitations` composite index in `firestore.indexes.json` (Plan 05)
