@@ -1,8 +1,0 @@
-﻿functions/src/index.ts(1,24): error TS2307: Cannot find module 'firebase-admin' or its corresponding type declarations.
-functions/src/resolveGhostParticipant.ts(1,36): error TS2307: Cannot find module 'firebase-functions/v2/https' or its corresponding type declarations.
-functions/src/resolveGhostParticipant.ts(2,24): error TS2307: Cannot find module 'firebase-admin' or its corresponding type declarations.
-functions/src/resolveGhostParticipant.ts(4,54): error TS7006: Parameter 'request' implicitly has an 'any' type.
-functions/src/resolveGhostParticipant.ts(76,29): error TS7006: Parameter 'expenseDoc' implicitly has an 'any' type.
-functions/src/resolveGhostParticipant.ts(100,32): error TS7006: Parameter 'settlementDoc' implicitly has an 'any' type.
-src/services/ocrService.ts(12,40): error TS2339: Property 'recognize' does not exist on type 'typeof import("C:/Users/alvan/receipt-tracker/node_modules/@infinitered/react-native-mlkit-text-recognition/build/index")'.
-src/services/receiptService.ts(108,42): error TS2322: Type '"jpeg"' is not assignable to type 'SaveFormat | undefined'.

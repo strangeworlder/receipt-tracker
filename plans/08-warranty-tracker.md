@@ -4,6 +4,8 @@
 
 This plan implements the warranty management screen where users can view, filter, and manage product warranties extracted from scanned receipts. It also covers the `warrantyStore` selector additions needed by the UI.
 
+> **Implementation status: Complete.** See divergences from this plan documented in the [Implementation Notes](#implementation-notes) section at the bottom.
+
 > **NativeWind v5 import rule:** Import `View`, `Text`, `ScrollView`, `Pressable`, `TextInput` from `@/tw` (not `react-native`). Import `Image` from `@/tw/image`. Raw React Native components silently ignore `className`.
 >
 > **No `expo-linear-gradient`:** Use `experimental_backgroundImage` CSS gradients on `View`.
@@ -126,10 +128,14 @@ Always shown at the bottom of the list:
 Add these selector functions to `src/stores/warrantyStore.ts`:
 
 ```typescript
+// Type aliases added to warrantyStore.ts:
+type WarrantyFilter = "all" | "active" | "expired";
+type WarrantyStatus = "action_required" | "healthy" | "expired";
+
 // Add to WarrantyState interface:
-getWarranties: (filter: "all" | "active" | "expired") => Warranty[];
+getWarranties: (filter: WarrantyFilter) => Warranty[];
 getDaysRemaining: (warrantyId: string) => number;
-getWarrantyStatus: (warrantyId: string) => "action_required" | "healthy" | "expired";
+getWarrantyStatus: (warrantyId: string) => WarrantyStatus;
 
 // Add to create() implementation:
 getWarranties: (filter) => {
@@ -139,9 +145,19 @@ getWarranties: (filter) => {
     case "active":
       return warranties.filter(w => new Date(w.expirationDate) > now);
     case "expired":
-      return warranties.filter(w => new Date(w.expirationDate) <= now);
+      // Most recently expired first
+      return [...warranties.filter(w => new Date(w.expirationDate) <= now)].sort(
+        (a, b) => new Date(b.expirationDate).getTime() - new Date(a.expirationDate).getTime()
+      );
     default:
-      return warranties;
+      // Soonest-expiring first; expired pushed to bottom
+      return [...warranties].sort((a, b) => {
+        const aExpired = new Date(a.expirationDate) <= now;
+        const bExpired = new Date(b.expirationDate) <= now;
+        if (aExpired && !bExpired) return 1;
+        if (!aExpired && bExpired) return -1;
+        return new Date(a.expirationDate).getTime() - new Date(b.expirationDate).getTime();
+      });
   }
 },
 
@@ -153,9 +169,9 @@ getDaysRemaining: (warrantyId) => {
   return Math.ceil((expiry.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 },
 
-getWarrantyStatus: (warrantyId) => {
+getWarrantyStatus: (warrantyId): WarrantyStatus => {
   const daysRemaining = get().getDaysRemaining(warrantyId);
-  if (daysRemaining < 0) return "expired";
+  if (daysRemaining <= 0) return "expired";  // Note: <= 0, not < 0 (see Implementation Notes)
   if (daysRemaining <= 30) return "action_required";
   return "healthy";
 },
@@ -219,15 +235,47 @@ Full detail bottom sheet (future enhancement):
 
 ## Deliverables Checklist
 
-- [ ] `app/(tabs)/warranty.tsx` — renders editorial header, filter bar, and warranty cards
-- [ ] Filter bar with All / Active / Expired pills (single-select)
-- [ ] Expiring-soon card variant with "Action Required" badge and warning banner
-- [ ] Healthy card variant with days-remaining indicator
-- [ ] Empty state / add-new card at bottom of list
-- [ ] Filter logic correctly filters warranties by status
-- [ ] Sorted by expiration urgency (soonest first, expired at bottom)
-- [ ] "View Receipt" navigates to `app/receipts/[receiptId]`
-- [ ] "Scan Receipt" link navigates to Scans tab
-- [ ] `warrantyStore` selector functions added (`getWarranties`, `getDaysRemaining`, `getWarrantyStatus`)
-- [ ] Notification tap handler in root layout navigates to Warranty tab
-- [ ] Empty list states for all filter combinations
+- [x] `app/(tabs)/warranty.tsx` — renders editorial header, filter bar, and warranty cards
+- [x] Filter bar with All / Active / Expired pills (single-select)
+- [x] Expiring-soon card variant with "Action Required" badge and warning banner
+- [x] Healthy card variant with days-remaining indicator
+- [x] Empty state / add-new card at bottom of list
+- [x] Filter logic correctly filters warranties by status
+- [x] Sorted by expiration urgency (soonest first, expired at bottom)
+- [x] "View Receipt" navigates to `app/receipts/[receiptId]`
+- [x] "Scan Receipt" link navigates to Scans tab
+- [x] `warrantyStore` selector functions added (`getWarranties`, `getDaysRemaining`, `getWarrantyStatus`)
+- [x] Notification tap handler in root layout navigates to Warranty tab
+- [x] Empty list states for all filter combinations
+
+---
+
+## Implementation Notes
+
+The following decisions were made during implementation that extend or diverge from the plan spec above:
+
+### 1. Expired card variant (not specified in plan)
+
+The plan defines "Expiring Soon" and "Healthy" card variants but does not specify how already-expired warranties should render. **Decision:** expired warranties reuse `ExpiringCard` with the badge text changed to "Expired" and `bg-outline` (muted grey) instead of `bg-error` (red). The warning banner uses `bg-surface-container-high` and muted text instead of `bg-error-container`. "View Receipt" button is rendered at 50% opacity to signal inactivity.
+
+### 2. `getWarrantyStatus` boundary condition (`<= 0` not `< 0`)
+
+The plan's code sample uses `if (daysRemaining < 0) return "expired"`. This causes a warranty expiring **today** (0 days remaining) to be returned as `"action_required"` for the entire day it expires. **Decision:** changed to `<= 0` so expiration-day warranties are immediately treated as expired, consistent with notification schedule (a notification fires on expiration day).
+
+### 3. `getWarranties` sort order extended
+
+The plan specifies "soonest first, expired at bottom" but provides only a basic `switch` implementation without the sort. **Implementation** uses a comparator that:
+- For `"all"` / `"active"`: non-expired sorted ascending by date, all expired pushed to the end
+- For `"expired"`: sorted descending (most recently expired first)
+
+### 4. `more_vert` menu is a visual-only no-op
+
+The plan shows a `more_vert` icon button on ExpiringSoon cards but defines no menu actions. **Decision:** the button is rendered and tappable but shows `Alert.alert("Options", "Coming soon.")`. A context menu (delete, extend warranty, file claim) can be wired up in a future enhancement.
+
+### 5. `WarrantyFilter` and `WarrantyStatus` type aliases
+
+Two explicit type aliases were added to `warrantyStore.ts` for type safety and reuse across the store and screen:
+```typescript
+type WarrantyFilter = "all" | "active" | "expired";
+type WarrantyStatus = "action_required" | "healthy" | "expired";
+```

@@ -15,6 +15,7 @@ import {
   Lexend_800ExtraBold,
 } from "@expo-google-fonts/lexend";
 import * as SplashScreen from "expo-splash-screen";
+import * as Notifications from "expo-notifications";
 import auth from "@react-native-firebase/auth";
 import type { FirebaseAuthTypes } from "@react-native-firebase/auth";
 
@@ -93,6 +94,20 @@ export default function RootLayout() {
     });
     return () => sub.remove();
   }, [user]);
+
+  // Navigate to warranty tab when user taps a warranty notification
+  useEffect(() => {
+    const sub = Notifications.addNotificationResponseReceivedListener(
+      (response) => {
+        const warrantyId =
+          response.notification.request.content.data?.warrantyId;
+        if (warrantyId) {
+          router.push("/(tabs)/warranty");
+        }
+      }
+    );
+    return () => sub.remove();
+  }, []);
 
   // Redirect based on auth state once both fonts and auth have resolved
   useEffect(() => {

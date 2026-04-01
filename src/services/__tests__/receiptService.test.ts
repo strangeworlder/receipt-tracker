@@ -244,6 +244,7 @@ describe("compressReceiptImage", () => {
 
     jest.doMock("expo-image-manipulator", () => ({
       ImageManipulator: { manipulate: mockManipulate },
+      SaveFormat: { JPEG: "jpeg", PNG: "png", WEBP: "webp" },
     }));
 
     jest.resetModules();
@@ -273,6 +274,7 @@ describe("uploadToFirebaseStorage (full)", () => {
 
     jest.doMock("expo-image-manipulator", () => ({
       ImageManipulator: { manipulate: mockManipulate },
+      SaveFormat: { JPEG: "jpeg", PNG: "png", WEBP: "webp" },
     }));
 
     jest.resetModules();
