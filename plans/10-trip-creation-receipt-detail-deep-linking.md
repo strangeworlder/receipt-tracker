@@ -1,6 +1,6 @@
 # Plan 10: Trip Creation, Receipt Detail & Deep Linking
 
-> **Prerequisite:** Plan 4 (Auth — `resolveGhostParticipant` Cloud Function deployed), Plan 5 (Data Layer — `tripService` implementations).
+> **Prerequisite:** Plan 4 (Auth — `resolveGhostParticipant` Cloud Function deployed), Plan 5 (Data Layer — `tripService` implementations), Plan 9 (Trip Management — all trip screens implemented).
 > **Completes:** These are the last three standalone additions that Plans 07–09 reference but do not implement themselves.
 
 This plan covers:
@@ -23,7 +23,8 @@ This plan covers:
 - `app.config.ts` already has `scheme: "triptrack"` (Plan 01 Step 10).
 - `resolveGhostParticipant` Cloud Function is deployed from Plan 04 Step 10.
 - `TripParticipant` uses `isGhost: boolean`, `name: string`, `uid?: string` — not `type`/`displayName`.
-- `app/(tabs)/trips/index.tsx` entry points (empty state + FAB) reference `router.push('/trips/new')`.
+- `app/(tabs)/trips/index.tsx` entry points (empty state + FAB) reference `router.push('/trips/new')` — already implemented in Plan 09.
+- `app/_layout.tsx` already has `trips/carpool-new` registered (Plan 09). The `trips/new` and `receipts/[receiptId]` routes are also already registered from Plan 01.
 
 ---
 
@@ -37,9 +38,10 @@ app/
     new.tsx     # Create trip form (already registered in app/_layout.tsx)
 ```
 
-Already registered in root layout (Plan 01):
+Already registered in root layout (Plan 01). `app/_layout.tsx` now also has `trips/carpool-new` (Plan 09):
 ```typescript
 <Stack.Screen name="trips/new" options={{ presentation: "modal", headerShown: false }} />
+<Stack.Screen name="trips/carpool-new" options={{ presentation: "modal", headerShown: false }} />
 ```
 
 ### Step A1: Entry Points
@@ -246,7 +248,7 @@ When the user taps "Edit":
 - Fields switch from display text to `TextInput`
 - Amount uses `keyboardType="decimal-pad"`
 - Save button: calls `receiptService.updateReceipt(receiptId, updates)` from Plan 05
-- On save, show success toast
+- On save, show `Alert.alert("Saved", "Receipt updated.")`
 
 ### Step B3: Delete Flow
 

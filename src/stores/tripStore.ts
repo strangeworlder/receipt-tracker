@@ -20,6 +20,13 @@ interface TripState {
   setSettlements: (tripId: string, settlements: SettlementTransaction[]) => void;
   setPlannerItems: (tripId: string, items: PlannerItem[]) => void;
 
+  // Derived selectors (read-only views)
+  getCarpools: (tripId: string) => Carpool[];
+  getExpenses: (tripId: string) => Expense[];
+  getSettlements: (tripId: string) => SettlementTransaction[];
+  getPlannerItems: (tripId: string) => PlannerItem[];
+  getPlannerProgress: (tripId: string) => { total: number; assigned: number; percentage: number };
+
   // UI actions
   addTrip: (trip: Trip) => void;
   updateTrip: (id: string, updates: Partial<Trip>) => void;
@@ -51,6 +58,22 @@ export const useTripStore = create<TripState>((set, get) => ({
 
   setPlannerItems: (tripId, items) =>
     set((s) => ({ plannerItems: { ...s.plannerItems, [tripId]: items } })),
+
+  getCarpools: (tripId) => get().carpools[tripId] ?? [],
+
+  getExpenses: (tripId) => get().expenses[tripId] ?? [],
+
+  getSettlements: (tripId) => get().settlements[tripId] ?? [],
+
+  getPlannerItems: (tripId) => get().plannerItems[tripId] ?? [],
+
+  getPlannerProgress: (tripId) => {
+    const items = get().plannerItems[tripId] ?? [];
+    const total = items.length;
+    const assigned = items.filter((i) => i.status === "assigned" || i.status === "brought").length;
+    const percentage = total === 0 ? 0 : Math.round((assigned / total) * 100);
+    return { total, assigned, percentage };
+  },
 
   addTrip: (trip) =>
     set((s) => ({ trips: { ...s.trips, [trip.id]: trip } })),

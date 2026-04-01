@@ -95,6 +95,32 @@ export async function addGhostParticipant(
   });
 }
 
+// --- Carpool CRUD ---
+
+export async function createCarpool(
+  tripId: string,
+  data: {
+    name: string;
+    route: string;
+    distance: number;
+    fuelCost: number;
+    passengers: import("../types").CarpoolPassenger[];
+  }
+): Promise<string> {
+  requireAuth();
+  const carpoolId = generateUUID();
+  await tripsCol()
+    .doc(tripId)
+    .collection("carpools")
+    .doc(carpoolId)
+    .set({
+      ...data,
+      tripId,
+      createdAt: new Date().toISOString(),
+    });
+  return carpoolId;
+}
+
 // --- Expense CRUD ---
 
 export async function addExpense(
@@ -310,3 +336,41 @@ export function listenToPlannerItems(
       );
     });
 }
+
+// --- Planner item claiming (Plan 09) ---
+
+export async function claimPlannerItem(
+  tripId: string,
+  itemId: string
+): Promise<void> {
+  const uid = requireAuth();
+  await tripsCol()
+    .doc(tripId)
+    .collection("plannerItems")
+    .doc(itemId)
+    .update({ assignedTo: uid, status: "assigned" });
+}
+
+export async function unclaimPlannerItem(
+  tripId: string,
+  itemId: string
+): Promise<void> {
+  requireAuth();
+  await tripsCol()
+    .doc(tripId)
+    .collection("plannerItems")
+    .doc(itemId)
+    .update({ assignedTo: null, status: "unassigned" });
+}
+
+/**
+ * Stub for FCM reminder. Wiring is in place for future Cloud Functions integration.
+ * The UI calls Alert.alert() to confirm to the user — this function is a no-op.
+ */
+export async function sendReminder(
+  _tripId: string,
+  _toParticipantId: string
+): Promise<void> {
+  // Future: call a Cloud Function to deliver an FCM push to the participant
+}
+

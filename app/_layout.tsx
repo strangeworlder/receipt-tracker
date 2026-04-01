@@ -145,6 +145,13 @@ export default function RootLayout() {
           }}
         />
         <Stack.Screen
+          name="trips/carpool-new"
+          options={{
+            presentation: "modal",
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
           name="receipts/[receiptId]"
           options={{ headerShown: false }}
         />

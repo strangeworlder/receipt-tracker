@@ -81,6 +81,13 @@ const ICON_MAP: Record<string, IconMapping> = {
   savings: { name: "piggy-bank", library: "community" },
   person_add: { name: "account-plus", library: "community" },
   check_circle_outline: { name: "check-circle-outline", library: "community" },
+  // Plan 09 — Trip Management
+  route: { name: "road-variant", library: "community" },
+  eco: { name: "leaf", library: "community" },
+  toll: { name: "boom-gate", library: "community" },
+  local_parking: { name: "parking", library: "community" },
+  camping: { name: "tent", library: "community" },
+  add_road: { name: "road-variant", library: "community" },
 };
 
 interface MaterialIconProps {

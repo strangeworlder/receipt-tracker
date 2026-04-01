@@ -159,3 +159,124 @@ describe("setPlannerItems", () => {
     expect(useTripStore.getState().plannerItems["t1"]).toHaveLength(1);
   });
 });
+
+// ─── New Selector Tests (Plan 09) ──────────────────────────────────────────────
+
+const mockCarpool = (id: string, tripId: string): Carpool => ({
+  id,
+  tripId,
+  name: `Carpool ${id}`,
+  route: "A → B",
+  distance: 100,
+  fuelCost: 20,
+  passengers: [],
+});
+
+const mockSettlement = (id: string, tripId: string): SettlementTransaction => ({
+  id,
+  tripId,
+  fromParticipantId: "p2",
+  toParticipantId: "p1",
+  amount: 50,
+  status: "pending",
+});
+
+const mockPlannerItem = (
+  id: string,
+  tripId: string,
+  status: "unassigned" | "assigned" | "brought" = "unassigned"
+) => ({
+  id,
+  tripId,
+  name: `Item ${id}`,
+  description: "A thing to bring",
+  category: "gear",
+  categoryId: "cat1",
+  status,
+  createdByUid: "uid-test",
+  createdAt: {} as any,
+});
+
+describe("getCarpools", () => {
+  it("returns carpools for the given tripId", () => {
+    useTripStore.getState().setCarpools("t1", [mockCarpool("c1", "t1"), mockCarpool("c2", "t1")]);
+    const result = useTripStore.getState().getCarpools("t1");
+    expect(result).toHaveLength(2);
+  });
+
+  it("returns an empty array when no carpools exist for the tripId", () => {
+    const result = useTripStore.getState().getCarpools("unknown");
+    expect(result).toEqual([]);
+  });
+});
+
+describe("getExpenses", () => {
+  it("returns expenses for the given tripId", () => {
+    useTripStore.getState().setExpenses("t1", [mockExpense("e1", "t1"), mockExpense("e2", "t1")]);
+    const result = useTripStore.getState().getExpenses("t1");
+    expect(result).toHaveLength(2);
+  });
+
+  it("returns an empty array when no expenses exist for the tripId", () => {
+    const result = useTripStore.getState().getExpenses("unknown");
+    expect(result).toEqual([]);
+  });
+});
+
+describe("getSettlements", () => {
+  it("returns settlements for the given tripId", () => {
+    useTripStore.getState().setSettlements("t1", [mockSettlement("s1", "t1")]);
+    const result = useTripStore.getState().getSettlements("t1");
+    expect(result).toHaveLength(1);
+  });
+
+  it("returns an empty array when no settlements exist for the tripId", () => {
+    const result = useTripStore.getState().getSettlements("unknown");
+    expect(result).toEqual([]);
+  });
+});
+
+describe("getPlannerItems", () => {
+  it("returns planner items for the given tripId", () => {
+    useTripStore.getState().setPlannerItems("t1", [
+      mockPlannerItem("i1", "t1"),
+      mockPlannerItem("i2", "t1"),
+    ]);
+    const result = useTripStore.getState().getPlannerItems("t1");
+    expect(result).toHaveLength(2);
+  });
+
+  it("returns an empty array when no planner items exist for the tripId", () => {
+    const result = useTripStore.getState().getPlannerItems("unknown");
+    expect(result).toEqual([]);
+  });
+});
+
+describe("getPlannerProgress", () => {
+  it("returns zero progress when there are no items", () => {
+    const result = useTripStore.getState().getPlannerProgress("t1");
+    expect(result).toEqual({ total: 0, assigned: 0, percentage: 0 });
+  });
+
+  it("counts assigned and brought items as assigned", () => {
+    useTripStore.getState().setPlannerItems("t1", [
+      mockPlannerItem("i1", "t1", "unassigned"),
+      mockPlannerItem("i2", "t1", "assigned"),
+      mockPlannerItem("i3", "t1", "brought"),
+    ]);
+    const result = useTripStore.getState().getPlannerProgress("t1");
+    expect(result.total).toBe(3);
+    expect(result.assigned).toBe(2);
+    expect(result.percentage).toBeCloseTo(67, 0);
+  });
+
+  it("returns 100 percent when all items are brought", () => {
+    useTripStore.getState().setPlannerItems("t1", [
+      mockPlannerItem("i1", "t1", "brought"),
+      mockPlannerItem("i2", "t1", "brought"),
+    ]);
+    const result = useTripStore.getState().getPlannerProgress("t1");
+    expect(result.percentage).toBe(100);
+  });
+});
+
